@@ -36,7 +36,8 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/ready']
+      # 127.0.0.1, not localhost: where IPv6 is enabled (e.g. GitHub runners) localhost is ::1.
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:4000/ready']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -52,7 +53,8 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/']
+      # nginx listens on IPv4 only (the unprivileged image can't add an IPv6 listener at start).
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/']
       interval: 5s
       timeout: 3s
       retries: 10
