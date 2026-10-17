@@ -2,6 +2,7 @@ import type { User } from '../domain/user';
 
 export interface UserRepository {
   findByEmail(email: string): Promise<User | undefined>;
+  findById(id: string): Promise<User | undefined>;
   save(user: User): Promise<User>;
 }
 
@@ -15,6 +16,10 @@ export const createInMemoryUserRepository = (seed: User[] = []): UserRepository 
       const user = [...usersById.values()].find(
         (candidate) => normaliseEmail(candidate.email) === normaliseEmail(email),
       );
+      return user && { ...user };
+    },
+    findById: async (id) => {
+      const user = usersById.get(id);
       return user && { ...user };
     },
     save: async (user) => {

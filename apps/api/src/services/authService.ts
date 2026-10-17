@@ -26,7 +26,12 @@ export const createAuthService = ({ users, tokens }: AuthServiceDependencies) =>
     return { token: tokens.issue(user.id), user: toPublicUser(user) };
   },
 
-  authenticate: (token: string): { userId: string } => tokens.verify(token),
+  // A valid signature isn't enough: the account must still exist (it may have been removed).
+  authenticate: async (token: string): Promise<{ userId: string }> => {
+    const { userId } = tokens.verify(token);
+    if (!(await users.findById(userId))) throw new UnauthorizedError('Invalid or expired token');
+    return { userId };
+  },
 });
 
 export type AuthService = ReturnType<typeof createAuthService>;

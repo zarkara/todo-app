@@ -30,6 +30,16 @@ export const describeUserRepository = (
       });
     });
 
+    describe('findById', () => {
+      it('finds a user by id', async () => {
+        expect(await repository.findById('ada')).toEqual(ada);
+      });
+
+      it('returns undefined for an unknown id', async () => {
+        expect(await repository.findById('nobody')).toBeUndefined();
+      });
+    });
+
     describe('save', () => {
       it('inserts a new user', async () => {
         const grace: User = { id: 'grace', email: 'grace@example.com', passwordHash: 'hash-2' };

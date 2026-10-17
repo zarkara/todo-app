@@ -22,6 +22,13 @@ export const createPostgresUserRepository = (pool: pg.Pool): UserRepository => (
     );
     return rows.map(toUser)[0];
   },
+  findById: async (id) => {
+    const { rows } = await pool.query<UserRow>(
+      'SELECT id, email, password_hash FROM users WHERE id = $1',
+      [id],
+    );
+    return rows.map(toUser)[0];
+  },
   save: async (user) => {
     await pool.query(
       `INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)

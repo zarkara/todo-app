@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { describe, expect, it } from 'vitest';
 import { UnauthorizedError } from '../domain/errors';
-import { createTokenService } from './tokens';
+import { createTokenService, TOKEN_AUDIENCE, TOKEN_ISSUER } from './tokens';
 
 const SECRET = 'test-secret-that-is-long-enough-for-hs256';
 const ISSUED_AT = new Date('2026-03-01T12:00:00.000Z');
@@ -44,9 +44,27 @@ describe('tokenService', () => {
   });
 
   it('rejects a token without a subject', () => {
-    const anonymous = jwt.sign({}, SECRET, { algorithm: 'HS256' });
+    const anonymous = jwt.sign({}, SECRET, {
+      algorithm: 'HS256',
+      issuer: TOKEN_ISSUER,
+      audience: TOKEN_AUDIENCE,
+    });
 
     expect(() => tokenServiceAt(ISSUED_AT).verify(anonymous)).toThrow(UnauthorizedError);
+  });
+
+  it('marks its tokens with this API as issuer and the web client as audience', () => {
+    expect(jwt.decode(token)).toMatchObject({ iss: TOKEN_ISSUER, aud: TOKEN_AUDIENCE, sub: 'ada' });
+  });
+
+  it.each([
+    ['no issuer or audience', {}],
+    ['another issuer', { issuer: 'some-other-service', audience: TOKEN_AUDIENCE }],
+    ['another audience', { issuer: TOKEN_ISSUER, audience: 'some-other-client' }],
+  ])('rejects a correctly signed token with %s', (_label, claims) => {
+    const foreign = jwt.sign({}, SECRET, { algorithm: 'HS256', subject: 'ada', ...claims });
+
+    expect(() => tokenServiceAt(new Date()).verify(foreign)).toThrow(UnauthorizedError);
   });
 
   it('rejects garbage', () => {

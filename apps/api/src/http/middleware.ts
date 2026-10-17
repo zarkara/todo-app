@@ -16,22 +16,24 @@ export const asyncHandler =
     route(req, res).catch(next);
   };
 
-const bearerTokenOf = (header = ''): string | undefined => {
-  const [scheme, token] = header.split(' ');
-  return scheme === 'Bearer' && token ? token : undefined;
-};
+// RFC 7235: the scheme name is case-insensitive.
+const BEARER = /^Bearer\s+(\S+)$/i;
+
+const bearerTokenOf = (header = ''): string | undefined => BEARER.exec(header)?.[1];
 
 export const requireAuth =
-  (authenticate: (token: string) => { userId: string }): RequestHandler =>
+  (authenticate: (token: string) => Promise<{ userId: string }>): RequestHandler =>
   (req, res, next) => {
-    try {
-      const token = bearerTokenOf(req.headers.authorization);
-      if (!token) throw new UnauthorizedError();
-      res.locals.userId = authenticate(token).userId;
-      next();
-    } catch (error) {
-      next(error);
+    const token = bearerTokenOf(req.headers.authorization);
+    if (!token) {
+      next(new UnauthorizedError());
+      return;
     }
+    // Errors thrown by later handlers must not be routed back through this rejection path.
+    authenticate(token).then(({ userId }) => {
+      res.locals.userId = userId;
+      next();
+    }, next);
   };
 
 export const routeNotFound = (_req: Request, _res: Response, next: NextFunction) => {

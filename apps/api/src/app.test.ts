@@ -16,17 +16,18 @@ beforeAll(async () => {
   passwordHash = await hashPassword(PASSWORD, 4);
 });
 
+const tokens = createTokenService({
+  secret: 'test-secret-that-is-long-enough-for-hs256',
+  ttlSeconds: 3600,
+  clock: () => new Date(),
+});
+
 const buildTestApp = (overrides: Partial<AppDependencies> = {}) => {
   let nextId = 0;
   const users = createInMemoryUserRepository([
     { id: 'ada', email: 'ada@example.com', passwordHash },
     { id: 'grace', email: 'grace@example.com', passwordHash },
   ]);
-  const tokens = createTokenService({
-    secret: 'test-secret-that-is-long-enough-for-hs256',
-    ttlSeconds: 3600,
-    clock: () => new Date(),
-  });
   return buildApp({
     authService: createAuthService({ users, tokens }),
     taskService: createTaskService({
@@ -133,6 +134,28 @@ describe('authentication on /tasks', () => {
 
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('rejects a valid token for a user who no longer exists with 401, not 500', async () => {
+    const app = buildTestApp();
+    const ghost = `Bearer ${tokens.issue('deleted-user')}`;
+
+    const reads = await request(app).get('/tasks').set('Authorization', ghost);
+    const writes = await request(app)
+      .post('/tasks')
+      .set('Authorization', ghost)
+      .send({ title: 'x' });
+
+    expect([reads.status, writes.status]).toEqual([401, 401]);
+  });
+
+  it('accepts the Bearer scheme in any letter case', async () => {
+    const app = buildTestApp();
+    const token = (await loginAs(app, 'ada@example.com')).replace('Bearer ', '');
+
+    const response = await request(app).get('/tasks').set('Authorization', `bearer ${token}`);
+
+    expect(response.status).toBe(200);
   });
 });
 

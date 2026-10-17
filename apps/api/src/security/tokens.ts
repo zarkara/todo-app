@@ -3,6 +3,10 @@ import type { Clock } from '../clock';
 import { UnauthorizedError } from '../domain/errors';
 
 const ALGORITHM = 'HS256';
+// Scope tokens to this API and its web client, so a token minted elsewhere with a shared
+// secret is still rejected.
+export const TOKEN_ISSUER = 'todo-api';
+export const TOKEN_AUDIENCE = 'todo-web';
 const INVALID_TOKEN = 'Invalid or expired token';
 
 export interface TokenService {
@@ -27,6 +31,8 @@ export const createTokenService = ({
     try {
       return jwt.verify(token, secret, {
         algorithms: [ALGORITHM],
+        issuer: TOKEN_ISSUER,
+        audience: TOKEN_AUDIENCE,
         clockTimestamp: nowInSeconds(),
       });
     } catch (error) {
@@ -39,6 +45,8 @@ export const createTokenService = ({
     issue: (userId) =>
       jwt.sign({ iat: nowInSeconds() }, secret, {
         algorithm: ALGORITHM,
+        issuer: TOKEN_ISSUER,
+        audience: TOKEN_AUDIENCE,
         subject: userId,
         expiresIn: ttlSeconds,
       }),

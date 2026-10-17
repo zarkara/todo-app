@@ -2,19 +2,20 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { UnauthorizedError } from '../domain/errors';
 import { createInMemoryUserRepository } from '../repositories/userRepository';
 import { hashPassword } from '../security/passwords';
-import { createTokenService } from '../security/tokens';
+import { createTokenService, type TokenService } from '../security/tokens';
 import { type AuthService, createAuthService } from './authService';
 
 const PASSWORD = 'correct horse';
 
 describe('authService', () => {
   let service: AuthService;
+  let tokens: TokenService;
 
   beforeAll(async () => {
     const users = createInMemoryUserRepository([
       { id: 'ada', email: 'ada@example.com', passwordHash: await hashPassword(PASSWORD, 4) },
     ]);
-    const tokens = createTokenService({
+    tokens = createTokenService({
       secret: 'test-secret-that-is-long-enough-for-hs256',
       ttlSeconds: 3600,
       clock: () => new Date(),
@@ -27,7 +28,7 @@ describe('authService', () => {
       const { token, user } = await service.login({ email: 'ada@example.com', password: PASSWORD });
 
       expect(user).toEqual({ id: 'ada', email: 'ada@example.com' });
-      expect(service.authenticate(token)).toEqual({ userId: 'ada' });
+      await expect(service.authenticate(token)).resolves.toEqual({ userId: 'ada' });
     });
 
     it('never exposes the password hash', async () => {
@@ -47,8 +48,14 @@ describe('authService', () => {
   });
 
   describe('authenticate', () => {
-    it('rejects an invalid token', () => {
-      expect(() => service.authenticate('not-a-token')).toThrow(UnauthorizedError);
+    it('rejects an invalid token', async () => {
+      await expect(service.authenticate('not-a-token')).rejects.toThrow(UnauthorizedError);
+    });
+
+    it('rejects a valid token whose user no longer exists', async () => {
+      await expect(service.authenticate(tokens.issue('deleted-user'))).rejects.toThrow(
+        UnauthorizedError,
+      );
     });
   });
 });
