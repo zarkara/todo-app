@@ -38,16 +38,18 @@ npm run dev            # API on :4000 with reload, web on http://localhost:5173
 
 Vite proxies `/api` to the API, so the browser always talks to one origin in development and in production, and no CORS setup is needed.
 
-| Command                    | What it does                                                                                                |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `npm test`                 | Unit and component tests (needs nothing running)                                                            |
-| `npm run test:integration` | Postgres integration tests in their own `todo_test` database, created automatically (`npm run db:up` first) |
-| `npm run test:coverage`    | Everything, with a coverage report and 80% thresholds                                                       |
-| `npm run lint`             | ESLint (bans `console` and TODO/FIXME comments) and Prettier                                                |
-| `npm run typecheck`        | `tsc` in strict mode for every workspace                                                                    |
-| `npm run check`            | lint, typecheck and unit tests: the gate used before each commit                                            |
+| Command                          | What it does                                                                                                                                                                                 |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`                       | Unit and component tests (needs nothing running)                                                                                                                                             |
+| `npm run test:integration`       | Postgres integration tests in their own `todo_test` database, created automatically (`npm run db:up` first)                                                                                  |
+| `npm run test:coverage`          | Everything, with a coverage report and 80% thresholds                                                                                                                                        |
+| `npm run lint`                   | ESLint (bans `console` and TODO/FIXME comments) and Prettier                                                                                                                                 |
+| `npm run typecheck`              | `tsc` in strict mode for every workspace                                                                                                                                                     |
+| `npm run check`                  | lint, typecheck and unit tests: the gate used before each commit                                                                                                                             |
+| `./scripts/validate-deploy.sh`   | Against a running stack: proves re-deploying is idempotent (no recreation, migrations and seeding no-ops, data kept)                                                                         |
+| `./scripts/validate-security.sh` | Against a running stack: validates every security layer (edge headers, network exposure, non-root containers, production guard, authentication, authorization, error hygiene, rate limiting) |
 
-CI (GitHub Actions) runs lint, typecheck and the full suite against a Postgres service container, and builds both Docker images.
+CI (GitHub Actions) runs lint, typecheck and the full suite against a Postgres service container, then builds and starts the whole stack and runs both validation scripts against it, on every branch.
 
 ## Assignment summary
 

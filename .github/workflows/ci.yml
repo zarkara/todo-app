@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
 
 jobs:
@@ -35,8 +35,19 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:coverage
 
-  docker:
+  # Builds the images, starts the whole stack, and validates deploy idempotency and every
+  # security layer against it.
+  stack:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose build
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: docker compose up -d --build --wait
+      - run: ./scripts/validate-deploy.sh
+      - run: ./scripts/validate-security.sh
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down -v
