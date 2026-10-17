@@ -11,6 +11,9 @@ export interface TaskRepository {
 // Copies on the way in and out so callers can never mutate stored state, mirroring a real database.
 const copy = (task: Task): Task => ({ ...task });
 
+export const ownershipConflict = (taskId: string) =>
+  new Error(`Task ${taskId} belongs to another user`);
+
 export const createInMemoryTaskRepository = (seed: Task[] = []): TaskRepository => {
   const tasks = new Map(seed.map((task) => [task.id, copy(task)]));
 
@@ -19,9 +22,20 @@ export const createInMemoryTaskRepository = (seed: Task[] = []): TaskRepository 
     return task?.userId === userId ? task : undefined;
   };
 
+  const assertOwnership = (task: Task) => {
+    const existing = tasks.get(task.id);
+    if (existing && existing.userId !== task.userId) throw ownershipConflict(task.id);
+  };
+
   const store = (task: Task) => {
     tasks.set(task.id, copy(task));
     return copy(task);
+  };
+
+  // Validates the whole batch before writing, matching the all-or-nothing transaction in Postgres.
+  const storeAll = (batch: Task[]) => {
+    batch.forEach(assertOwnership);
+    return batch.map(store);
   };
 
   return {
@@ -31,8 +45,11 @@ export const createInMemoryTaskRepository = (seed: Task[] = []): TaskRepository 
       const task = findOwned(userId, id);
       return task && copy(task);
     },
-    save: async (task) => store(task),
-    saveAll: async (batch) => batch.map(store),
+    save: async (task) => {
+      assertOwnership(task);
+      return store(task);
+    },
+    saveAll: async (batch) => storeAll(batch),
     remove: async (userId, id) => Boolean(findOwned(userId, id)) && tasks.delete(id),
   };
 };

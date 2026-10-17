@@ -19,7 +19,7 @@ const idsOf = (tasks: Task[]) => tasks.map(({ id }) => id).toSorted();
 // Behaviour every TaskRepository adapter must honour; run it against each implementation.
 export const describeTaskRepository = (
   name: string,
-  createRepository: (seed: Task[]) => TaskRepository,
+  createRepository: (seed: Task[]) => TaskRepository | Promise<TaskRepository>,
 ) =>
   describe(`${name} (TaskRepository contract)`, () => {
     const adasTask = aTask({ id: 'a1', userId: 'ada' });
@@ -27,8 +27,8 @@ export const describeTaskRepository = (
     const gracesTask = aTask({ id: 'g1', userId: 'grace' });
     let repository: TaskRepository;
 
-    beforeEach(() => {
-      repository = createRepository([adasTask, adasOtherTask, gracesTask]);
+    beforeEach(async () => {
+      repository = await createRepository([adasTask, adasOtherTask, gracesTask]);
     });
 
     describe('listByUser', () => {
@@ -68,6 +68,13 @@ export const describeTaskRepository = (
 
         expect((await repository.findById('ada', 'a1'))?.title).toBe('Renamed');
       });
+
+      it("refuses to overwrite another user's task with the same id", async () => {
+        await expect(repository.save({ ...gracesTask, userId: 'ada' })).rejects.toThrow(
+          'belongs to another user',
+        );
+        expect(await repository.findById('grace', 'g1')).toEqual(gracesTask);
+      });
     });
 
     describe('saveAll', () => {
@@ -85,6 +92,16 @@ export const describeTaskRepository = (
           ['a1', 1],
           ['a2', 0],
         ]);
+      });
+
+      it('stores nothing when any task in the batch is rejected', async () => {
+        const batch = [
+          { ...adasTask, title: 'Renamed' },
+          { ...gracesTask, userId: 'ada' },
+        ];
+
+        await expect(repository.saveAll(batch)).rejects.toThrow('belongs to another user');
+        expect((await repository.findById('ada', 'a1'))?.title).toBe('Buy milk');
       });
     });
 

@@ -7,10 +7,12 @@
   },
   "dependencies": {
     "@todo/shared": "*",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@types/express": "^4.17.25",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^6.0.3",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15"

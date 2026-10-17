@@ -10,9 +10,11 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --project=!api-integration",
+    "test:integration": "vitest run --project=api-integration",
+    "test:watch": "vitest --project=!api-integration",
     "test:coverage": "vitest run --coverage",
+    "db:up": "docker compose up -d --wait db",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present",
