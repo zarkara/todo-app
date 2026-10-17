@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { buildApp } from './app';
 import { systemClock } from './clock';
 import { loadConfig } from './config';
-import { createPool, migrate } from './db/database';
+import { createPool, migrate, poolOptions } from './db/database';
 import { createPostgresTaskRepository } from './repositories/postgresTaskRepository';
 import { createPostgresUserRepository } from './repositories/postgresUserRepository';
 import { seedUsers } from './seed';
@@ -17,7 +17,7 @@ const writeError = (error: unknown) => process.stderr.write(`${describe(error)}\
 
 const start = async () => {
   const config = loadConfig(process.env);
-  const pool = createPool(config.databaseUrl);
+  const pool = createPool(poolOptions(config), writeError);
   await migrate(pool);
 
   const users = createPostgresUserRepository(pool);
@@ -36,6 +36,9 @@ const start = async () => {
       newId: randomUUID,
     }),
     reportError: writeError,
+    checkReadiness: async () => {
+      await pool.query('SELECT 1');
+    },
     trustProxyHops: config.trustProxyHops,
   });
 

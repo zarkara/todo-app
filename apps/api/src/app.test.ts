@@ -53,6 +53,30 @@ describe('GET /health', () => {
   });
 });
 
+describe('GET /ready', () => {
+  it('reports ready when its dependencies respond', async () => {
+    const response = await request(buildTestApp({ checkReadiness: async () => {} })).get('/ready');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ready' });
+  });
+
+  it('returns 503 without internal details when a dependency is down, and reports it', async () => {
+    const reportError = vi.fn();
+    const failure = new Error('connect ECONNREFUSED 10.0.0.5:5432');
+    const app = buildTestApp({ checkReadiness: () => Promise.reject(failure), reportError });
+
+    const response = await request(app).get('/ready');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: { code: 'NOT_READY', message: 'Service is not ready' },
+    });
+    expect(JSON.stringify(response.body)).not.toContain('ECONNREFUSED');
+    expect(reportError).toHaveBeenCalledWith(failure);
+  });
+});
+
 describe('POST /auth/login', () => {
   it('returns a token and the user for valid credentials', async () => {
     const response = await request(buildTestApp())

@@ -16,6 +16,8 @@ export interface AppDependencies {
   authService: AuthService;
   taskService: TaskService;
   reportError: (error: unknown) => void;
+  // Throws when a dependency the API needs (the database) is unavailable.
+  checkReadiness?: () => Promise<void>;
   // Proxies in front of the API (nginx in compose); needed to rate limit by the real client IP.
   trustProxyHops?: number;
   loginRateLimit?: { limit: number; windowMs: number };
@@ -35,6 +37,7 @@ export const buildApp = ({
   authService,
   taskService,
   reportError,
+  checkReadiness = async () => {},
   trustProxyHops = 0,
   loginRateLimit = DEFAULT_LOGIN_RATE_LIMIT,
 }: AppDependencies): Express => {
@@ -43,8 +46,18 @@ export const buildApp = ({
   app.set('trust proxy', trustProxyHops);
   app.use(helmet());
   app.use(express.json({ limit: MAX_BODY_SIZE }));
+  // Liveness: the process is up. Readiness: it can also serve requests (database reachable).
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
+  });
+  app.get('/ready', (_req, res) => {
+    checkReadiness().then(
+      () => res.json({ status: 'ready' }),
+      (error: unknown) => {
+        reportError(error);
+        res.status(503).json({ error: { code: 'NOT_READY', message: 'Service is not ready' } });
+      },
+    );
   });
   app.use('/auth/login', loginLimiter(loginRateLimit));
   app.use('/auth', authRoutes(authService));
