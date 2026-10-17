@@ -35,6 +35,8 @@ const envSchema = z
     DATABASE_SSL: z.enum(['disable', 'require', 'verify-full']).default('disable'),
     DATABASE_SSL_CA_FILE: z.string().min(1).optional(),
     DB_POOL_MAX: z.coerce.number().int().positive().default(DEFAULT_DB_POOL_MAX),
+    // Off in production deployments that run `migrate` as a separate step before rollout.
+    MIGRATE_ON_START: z.enum(['true', 'false']).default('true'),
     JWT_SECRET: z.string().min(MIN_SECRET_LENGTH),
     TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(DEFAULT_TOKEN_TTL_SECONDS),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
@@ -62,6 +64,7 @@ const envSchema = z
     databaseSsl: env.DATABASE_SSL,
     databaseSslCaFile: env.DATABASE_SSL_CA_FILE ?? null,
     dbPoolMax: env.DB_POOL_MAX,
+    migrateOnStart: env.MIGRATE_ON_START === 'true',
     jwtSecret: env.JWT_SECRET,
     tokenTtlSeconds: env.TOKEN_TTL_SECONDS,
     trustProxyHops: env.TRUST_PROXY_HOPS,

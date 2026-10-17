@@ -15,7 +15,7 @@ RUN npm run build --workspace=@todo/api
 FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=build /app/apps/api/dist/server.cjs ./
+COPY --from=build /app/apps/api/dist/server.cjs /app/apps/api/dist/migrate.cjs ./
 USER node
 EXPOSE 4000
 CMD ["node", "server.cjs"]

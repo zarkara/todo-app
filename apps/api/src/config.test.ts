@@ -13,6 +13,7 @@ describe('loadConfig', () => {
       databaseSsl: 'disable',
       databaseSslCaFile: null,
       dbPoolMax: 10,
+      migrateOnStart: true,
       jwtSecret: SECRET,
       tokenTtlSeconds: 28_800,
       trustProxyHops: 0,
@@ -29,6 +30,7 @@ describe('loadConfig', () => {
       DATABASE_SSL: 'verify-full',
       DATABASE_SSL_CA_FILE: '/etc/ssl/rds-ca.pem',
       DB_POOL_MAX: '20',
+      MIGRATE_ON_START: 'false',
       DEMO_USERS: 'ada@example.com:pass:word, grace@example.com:secret',
     });
 
@@ -39,6 +41,7 @@ describe('loadConfig', () => {
       databaseSsl: 'verify-full',
       databaseSslCaFile: '/etc/ssl/rds-ca.pem',
       dbPoolMax: 20,
+      migrateOnStart: false,
       demoUsers: [
         { email: 'ada@example.com', password: 'pass:word' },
         { email: 'grace@example.com', password: 'secret' },

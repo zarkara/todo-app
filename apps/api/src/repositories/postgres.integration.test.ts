@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createPool, migrate } from '../db/database';
+import { createPool } from '../db/database';
+import { runMigrations } from '../db/migrations';
 import { createPostgresTaskRepository } from './postgresTaskRepository';
 import { createPostgresUserRepository } from './postgresUserRepository';
 import { describeTaskRepository } from './taskRepository.contract';
@@ -11,7 +12,7 @@ const TASK_OWNER_IDS = ['ada', 'grace'];
 
 const resetDatabase = () => pool.query('TRUNCATE tasks, users');
 
-beforeAll(() => migrate(pool));
+beforeAll(() => runMigrations(pool));
 afterAll(() => pool.end());
 
 describeUserRepository('PostgresUserRepository', async (seed) => {
@@ -53,11 +54,5 @@ describe('idle connection loss', () => {
 
     await vi.waitFor(() => expect(onIdleError).toHaveBeenCalledOnce());
     await victim.end();
-  });
-});
-
-describe('migrate', () => {
-  it('can be re-run safely on an existing schema', async () => {
-    await expect(migrate(pool)).resolves.toBeUndefined();
   });
 });

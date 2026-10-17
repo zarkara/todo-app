@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { buildApp } from './app';
 import { systemClock } from './clock';
 import { loadConfig } from './config';
-import { createPool, migrate, poolOptions } from './db/database';
+import { createPool, poolOptions } from './db/database';
+import { describeMigrationResult, runMigrations } from './db/migrations';
 import { createPostgresTaskRepository } from './repositories/postgresTaskRepository';
 import { createPostgresUserRepository } from './repositories/postgresUserRepository';
 import { seedUsers } from './seed';
@@ -18,7 +19,9 @@ const writeError = (error: unknown) => process.stderr.write(`${describe(error)}\
 const start = async () => {
   const config = loadConfig(process.env);
   const pool = createPool(poolOptions(config), writeError);
-  await migrate(pool);
+  if (config.migrateOnStart) {
+    process.stdout.write(`${describeMigrationResult(await runMigrations(pool))}\n`);
+  }
 
   const users = createPostgresUserRepository(pool);
   await seedUsers(users, config.demoUsers);

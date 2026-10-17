@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import pg from 'pg';
 import type { Config } from '../config';
-import { SCHEMA } from './schema';
 
 export type Queryable = Pick<pg.ClientBase, 'query'>;
 
@@ -48,10 +47,6 @@ export const createPool = (
   options: pg.PoolConfig,
   onIdleClientError: (error: Error) => void,
 ): pg.Pool => new pg.Pool(options).on('error', onIdleClientError);
-
-export const migrate = async (pool: pg.Pool): Promise<void> => {
-  await pool.query(SCHEMA);
-};
 
 export const withTransaction = async <T>(
   pool: pg.Pool,
