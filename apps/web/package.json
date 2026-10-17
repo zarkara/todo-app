@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -17,10 +20,14 @@
     "vite": "^7.3.7"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@tanstack/react-query": "^5.104.3",
     "@todo/shared": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6",
     "zod": "^3.25.76"
   }
 }

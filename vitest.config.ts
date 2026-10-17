@@ -9,6 +9,7 @@ export default defineConfig({
       exclude: [
         '**/*.test.{ts,tsx}',
         '**/*.contract.ts',
+        '**/src/test/**',
         '**/index.ts',
         '**/types.ts',
         '**/main.tsx',

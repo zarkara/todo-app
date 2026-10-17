@@ -3,6 +3,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
 RUN npm ci --workspace=@todo/api --include-workspace-root
 COPY tsconfig.base.json ./
