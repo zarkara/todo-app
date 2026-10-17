@@ -19,21 +19,36 @@ login() {
 }
 user_ids() { docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -tAc 'SELECT email, id FROM users ORDER BY email'; }
 
-# 1. Converging an up-to-date stack changes nothing.
-converge=$(docker compose up -d --no-build --wait 2>&1)
-verdict 're-running compose up recreates and restarts nothing' '! grep -qiE "recreat|creat|starting" <<<"$converge"'
+# 1. Converging an up-to-date stack changes nothing. Compare each container's id and start time
+#    rather than compose's log wording, which differs between Compose versions.
+containers() { docker compose ps -q | sort | xargs docker inspect -f '{{.Name}} {{.Id}} {{.State.StartedAt}}'; }
+before_converge=$(containers)
+converge_output=$(docker compose up -d --no-build --wait 2>&1)
+after_converge=$(containers)
+if [ "$before_converge" = "$after_converge" ]; then
+  pass 're-running compose up recreates and restarts nothing'
+else
+  fail 're-running compose up recreates and restarts nothing'
+  diff <(echo "$before_converge") <(echo "$after_converge") | sed 's/^/      /'
+  sed 's/^/      compose: /' <<<"$converge_output"
+fi
 
-# 2. Migrations re-run as a no-op.
+# 2. Every service restarts on its own after a host or Docker daemon restart.
+unrestartable=$(docker compose config --format json |
+  node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const services=JSON.parse(s).services;process.stdout.write(Object.keys(services).filter((name)=>!["always","unless-stopped"].includes(services[name].restart)).join(" "))})')
+verdict 'every service restarts by itself after a host or Docker restart' '[ -z "$unrestartable" ] || { echo "      no restart policy: $unrestartable"; false; }'
+
+# 3. Migrations re-run as a no-op.
 migrate=$(docker compose run --rm --no-deps api node migrate.cjs 2>&1 | tail -1)
 verdict 're-running migrations applies nothing' '[ "$migrate" = "Database schema is up to date" ]'
 
-# 3. Seeding on start keeps existing user ids (tasks stay attached).
+# 4. Seeding on start keeps existing user ids (tasks stay attached).
 before=$(user_ids)
 docker compose restart api >/dev/null 2>&1 && docker compose up -d --no-build --wait api >/dev/null 2>&1
 after=$(user_ids)
 verdict 'restarting re-seeds demo users without changing their ids' '[ -n "$before" ] && [ "$before" = "$after" ]'
 
-# 4. Data survives a full redeploy of the application containers.
+# 5. Data survives a full redeploy of the application containers.
 title="deploy-check-$(date +%s)-$$"
 token=$(login)
 id=$(curl -s "$WEB_URL/api/tasks" -H "authorization: Bearer $token" -H 'content-type: application/json' \
