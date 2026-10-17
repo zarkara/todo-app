@@ -22,7 +22,9 @@ user_ids() { docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -tAc 'SE
 # 1. Converging an up-to-date stack changes nothing. Compare each container's id and start time
 #    rather than compose's log wording, which differs between Compose versions.
 containers() { docker compose ps -q | sort | xargs docker inspect -f '{{.Name}} {{.Id}} {{.State.StartedAt}}'; }
+images() { docker compose ps -q | sort | xargs docker inspect -f '{{.Name}} image={{.Image}} label={{index .Config.Labels "com.docker.compose.image"}}'; }
 before_converge=$(containers)
+before_images=$(images)
 converge_output=$(docker compose up -d --no-build --wait 2>&1)
 after_converge=$(containers)
 if [ "$before_converge" = "$after_converge" ]; then
@@ -31,6 +33,7 @@ else
   fail 're-running compose up recreates and restarts nothing'
   diff <(echo "$before_converge") <(echo "$after_converge") | sed 's/^/      /'
   sed 's/^/      compose: /' <<<"$converge_output"
+  sed 's/^/      before: /' <<<"$before_images"
 fi
 
 # 2. Every service restarts on its own after a host or Docker daemon restart.

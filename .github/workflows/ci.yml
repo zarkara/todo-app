@@ -44,7 +44,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - run: docker compose up -d --build --wait
+      - run: docker compose version
+      # Build, then start, as a deploy does: with the classic image store, a container started by
+      # `up --build` is labelled with a different image reference than a later `up` resolves, so
+      # the next converge would recreate it once.
+      - run: docker compose build
+      - run: docker compose up -d --wait
       - run: ./scripts/validate-deploy.sh
       - run: ./scripts/validate-security.sh
       - if: failure()
