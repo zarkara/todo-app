@@ -11,6 +11,7 @@ describe('loadConfig', () => {
       databaseUrl: 'postgres://todo:todo@db:5432/todo',
       jwtSecret: SECRET,
       tokenTtlSeconds: 28_800,
+      trustProxyHops: 0,
       demoUsers: [],
     });
   });
@@ -20,12 +21,14 @@ describe('loadConfig', () => {
       ...minimalEnv,
       PORT: '8081',
       TOKEN_TTL_SECONDS: '60',
+      TRUST_PROXY_HOPS: '1',
       DEMO_USERS: 'ada@example.com:pass:word, grace@example.com:secret',
     });
 
     expect(config).toMatchObject({
       port: 8081,
       tokenTtlSeconds: 60,
+      trustProxyHops: 1,
       demoUsers: [
         { email: 'ada@example.com', password: 'pass:word' },
         { email: 'grace@example.com', password: 'secret' },

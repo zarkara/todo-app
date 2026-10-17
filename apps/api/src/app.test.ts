@@ -270,6 +270,36 @@ describe('/tasks', () => {
   });
 });
 
+describe('hardening', () => {
+  it('sets security headers on every response', async () => {
+    const response = await request(buildTestApp()).get('/health');
+
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-powered-by']).toBeUndefined();
+  });
+
+  it('rate limits repeated login attempts with a JSON 429', async () => {
+    const app = buildTestApp({ loginRateLimit: { limit: 2, windowMs: 60_000 } });
+    const attempt = () =>
+      request(app).post('/auth/login').send({ email: 'ada@example.com', password: 'guess' });
+
+    await attempt();
+    await attempt();
+    const blocked = await attempt();
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error.code).toBe('RATE_LIMITED');
+  });
+
+  it('does not rate limit the rest of the API', async () => {
+    const app = buildTestApp({ loginRateLimit: { limit: 1, windowMs: 60_000 } });
+
+    const responses = await Promise.all([1, 2, 3].map(() => request(app).get('/health')));
+
+    expect(responses.map(({ status }) => status)).toEqual([200, 200, 200]);
+  });
+});
+
 describe('error handling', () => {
   it('returns JSON 404 for unknown routes', async () => {
     const response = await request(buildTestApp()).get('/nope');

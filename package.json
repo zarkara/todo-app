@@ -10,6 +10,7 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names api,web \"npm run dev -w @todo/api\" \"npm run dev -w @todo/web\"",
     "test": "vitest run --project=!api-integration",
     "test:integration": "vitest run --project=api-integration",
     "test:watch": "vitest --project=!api-integration",
@@ -24,6 +25,7 @@
     "@eslint/js": "^9.39.1",
     "@types/node": "^22.20.5",
     "@vitest/coverage-v8": "^3.2.4",
+    "concurrently": "^9.2.5",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^5.2.0",

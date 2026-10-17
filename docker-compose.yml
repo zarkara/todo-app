@@ -24,6 +24,8 @@ services:
       # Local-development defaults only: set real values in the environment for any shared deployment.
       JWT_SECRET: ${JWT_SECRET:-dev-only-secret-replace-me-in-production}
       DEMO_USERS: ${DEMO_USERS:-demo@example.com:password123,grace@example.com:password123}
+      # nginx in the web container is the one proxy in front of the API.
+      TRUST_PROXY_HOPS: 1
     ports:
       - '${API_PORT:-4000}:4000'
     depends_on:

@@ -27,6 +27,7 @@ const envSchema = z
     DATABASE_URL: z.string().url(),
     JWT_SECRET: z.string().min(MIN_SECRET_LENGTH),
     TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(DEFAULT_TOKEN_TTL_SECONDS),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
     DEMO_USERS: demoUsersSchema,
   })
   .transform((env) => ({
@@ -34,6 +35,7 @@ const envSchema = z
     databaseUrl: env.DATABASE_URL,
     jwtSecret: env.JWT_SECRET,
     tokenTtlSeconds: env.TOKEN_TTL_SECONDS,
+    trustProxyHops: env.TRUST_PROXY_HOPS,
     demoUsers: env.DEMO_USERS,
   }));
 

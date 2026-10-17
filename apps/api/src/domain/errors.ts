@@ -1,4 +1,4 @@
-export type ErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'UNAUTHORIZED';
+export type ErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'UNAUTHORIZED' | 'RATE_LIMITED';
 
 // Expected business failures; the HTTP layer maps each code to a status.
 export class AppError extends Error {
@@ -27,5 +27,11 @@ export class ValidationError extends AppError {
 export class UnauthorizedError extends AppError {
   constructor(message = 'Authentication required') {
     super('UNAUTHORIZED', message);
+  }
+}
+
+export class TooManyRequestsError extends AppError {
+  constructor(message = 'Too many attempts, please try again later') {
+    super('RATE_LIMITED', message);
   }
 }

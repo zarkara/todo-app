@@ -6,6 +6,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   VALIDATION: 400,
   UNAUTHORIZED: 401,
+  RATE_LIMITED: 429,
 };
 
 interface ErrorResponse {

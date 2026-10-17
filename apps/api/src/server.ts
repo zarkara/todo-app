@@ -36,6 +36,7 @@ const start = async () => {
       newId: randomUUID,
     }),
     reportError: writeError,
+    trustProxyHops: config.trustProxyHops,
   });
 
   const server = app.listen(config.port, () => {
