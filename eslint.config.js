@@ -13,6 +13,7 @@ export default tseslint.config(
       'no-console': 'error',
       'no-warning-comments': ['error', { terms: ['todo', 'fixme', 'xxx'], location: 'anywhere' }],
       'prefer-const': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'no-var': 'error',
     },
   },
