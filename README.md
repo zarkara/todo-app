@@ -23,7 +23,7 @@ Open **http://localhost:8080** and sign in with one of the demo accounts:
 
 Signing in as both, in two browsers, shows that each user sees only their own tasks.
 
-Compose starts three containers: `db` (PostgreSQL 17), `api` (port 4000) and `web` (nginx on port 8080, which also proxies `/api` to the API). Data persists in the `db-data` volume; `docker compose down -v` resets it. If a port is taken, override it, for example `WEB_PORT=8081 POSTGRES_PORT=5433 docker compose up --build`.
+Compose starts three containers: `db` (PostgreSQL 17, bound to `127.0.0.1:5432`), `api` (reachable only through nginx) and `web` (unprivileged nginx on port 8080, which serves the app and proxies `/api` to the API). Data persists in the `db-data` volume; `docker compose down -v` resets it. If a port is taken, override it, for example `WEB_PORT=8081 POSTGRES_PORT=5433 docker compose up --build`.
 
 ## Local development
 
@@ -38,14 +38,14 @@ npm run dev            # API on :4000 with reload, web on http://localhost:5173
 
 Vite proxies `/api` to the API, so the browser always talks to one origin in development and in production, and no CORS setup is needed.
 
-| Command                    | What it does                                                            |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `npm test`                 | Unit and component tests (needs nothing running)                        |
-| `npm run test:integration` | Repository contract tests against real Postgres (`npm run db:up` first) |
-| `npm run test:coverage`    | Everything, with a coverage report and 80% thresholds                   |
-| `npm run lint`             | ESLint (bans `console` and TODO/FIXME comments) and Prettier            |
-| `npm run typecheck`        | `tsc` in strict mode for every workspace                                |
-| `npm run check`            | lint, typecheck and unit tests: the gate used before each commit        |
+| Command                    | What it does                                                                                                |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `npm test`                 | Unit and component tests (needs nothing running)                                                            |
+| `npm run test:integration` | Postgres integration tests in their own `todo_test` database, created automatically (`npm run db:up` first) |
+| `npm run test:coverage`    | Everything, with a coverage report and 80% thresholds                                                       |
+| `npm run lint`             | ESLint (bans `console` and TODO/FIXME comments) and Prettier                                                |
+| `npm run typecheck`        | `tsc` in strict mode for every workspace                                                                    |
+| `npm run check`            | lint, typecheck and unit tests: the gate used before each commit                                            |
 
 CI (GitHub Actions) runs lint, typecheck and the full suite against a Postgres service container, and builds both Docker images.
 

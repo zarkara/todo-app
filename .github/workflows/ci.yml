@@ -23,7 +23,7 @@ jobs:
           --health-timeout 3s
           --health-retries 15
     env:
-      DATABASE_URL: postgres://todo:todo@localhost:5432/todo
+      DATABASE_URL: postgres://todo:todo@localhost:5432/todo_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

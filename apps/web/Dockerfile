@@ -11,7 +11,7 @@ COPY packages/shared packages/shared
 COPY apps/web apps/web
 RUN npm run build --workspace=@todo/web
 
-FROM nginx:1.28-alpine
+FROM nginxinc/nginx-unprivileged:1.28-alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080
