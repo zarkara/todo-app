@@ -6,6 +6,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@todo/shared": "*",
     "express": "^4.21.2"
   },
   "devDependencies": {

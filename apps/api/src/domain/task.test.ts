@@ -1,3 +1,4 @@
+import type { Task } from '@todo/shared';
 import { describe, expect, it } from 'vitest';
 import {
   applyPatch,
@@ -7,7 +8,6 @@ import {
   matchesQuery,
   nextPosition,
   reorder,
-  type Task,
 } from './task';
 
 const CREATED_AT = '2026-01-01T00:00:00.000Z';

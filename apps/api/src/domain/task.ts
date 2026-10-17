@@ -1,20 +1,4 @@
-export interface Task {
-  id: string;
-  userId: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  position: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NewTask {
-  title: string;
-  description?: string;
-}
-
-export type TaskPatch = Partial<Pick<Task, 'title' | 'description' | 'completed'>>;
+import type { NewTask, Task, TaskPatch } from '@todo/shared';
 
 export interface TaskContext {
   id: string;
@@ -24,6 +8,8 @@ export interface TaskContext {
 }
 
 const EDITABLE_FIELDS = ['title', 'description', 'completed'] as const;
+
+type EditableFields = Partial<Pick<Task, (typeof EDITABLE_FIELDS)[number]>>;
 
 export const createTask = (
   { title, description = '' }: NewTask,
@@ -39,7 +25,7 @@ export const createTask = (
   updatedAt: now,
 });
 
-const editableFieldsOf = (patch: TaskPatch): TaskPatch =>
+const editableFieldsOf = (patch: TaskPatch): EditableFields =>
   Object.fromEntries(
     EDITABLE_FIELDS.filter((field) => patch[field] !== undefined).map((field) => [
       field,
