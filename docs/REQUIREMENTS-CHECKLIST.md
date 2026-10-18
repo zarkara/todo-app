@@ -30,7 +30,7 @@ Each requirement stated in the challenge brief, checked against the code on `waf
 
 - [x] **Running instructions for a Mac:** "Quick start (macOS)", one `docker compose up --build`.
 - [~] **The quick start works on any Mac:** a Postgres already running on port 5432 (Homebrew, Postgres.app) made `docker compose up` fail. The database port is no longer published by default; `npm run db:up` publishes it on loopback for development (`docker-compose.dev.yml`).
-- [ ] **Bonus: deployment to a distributed cloud:** the "Deploying to a distributed cloud (AWS)" section earns this bonus but predates Phase 1. Decision needed: keep and update it, or remove it.
+- [~] **Bonus: deployment to a distributed cloud:** the out-of-date AWS notes (whose `/api` routing would have returned 404) are replaced by an Azure deployment: `infra/azure/main.bicep`, compiled to the ARM template `azuredeploy.json`, with step-by-step `az` commands. It compiles and lints against the Azure schemas but hasn't been deployed to a live subscription.
 - [~] **A summary of the assignment:** the "Assignment summary" heading had no summary. Added one paragraph.
 - [x] **Overall approach:** five numbered points.
 - [x] **Features completed:** checklist.
@@ -59,4 +59,3 @@ Each requirement stated in the challenge brief, checked against the code on `waf
 - [ ] Share the private repository with the reviewers.
 - [ ] Delete the `review` branch on GitHub.
 - [ ] Decide on merging `waf-remediation` into `main`.
-- [ ] Decide on the README's cloud deployment section.

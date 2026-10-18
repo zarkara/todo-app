@@ -12,6 +12,8 @@ COPY apps/web apps/web
 RUN npm run build --workspace=@todo/web
 
 FROM nginxinc/nginx-unprivileged:1.28-alpine
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Rendered to /etc/nginx/conf.d/default.conf at start-up, substituting API_UPSTREAM only.
+COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
+ENV API_UPSTREAM=http://api:4000
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 8080

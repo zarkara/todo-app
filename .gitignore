@@ -4,3 +4,6 @@ coverage/
 .env
 *.log
 .DS_Store
+
+# Azure deployment secrets (README, Deploying to Azure)
+.azure-secrets

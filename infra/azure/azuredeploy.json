@@ -1,0 +1,391 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.48.1.52935",
+      "templateHash": "6860481638975488874"
+    }
+  },
+  "parameters": {
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "todo",
+      "minLength": 2,
+      "maxLength": 10,
+      "metadata": {
+        "description": "Lowercase prefix for resource names."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "registryName": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing Azure Container Registry in this resource group that holds both images."
+      }
+    },
+    "apiImage": {
+      "type": "string",
+      "metadata": {
+        "description": "API image name and tag in the registry, for example todo-api:1.0.0."
+      }
+    },
+    "webImage": {
+      "type": "string",
+      "metadata": {
+        "description": "Web image name and tag in the registry, for example todo-web:1.0.0."
+      }
+    },
+    "jwtSecret": {
+      "type": "securestring",
+      "minLength": 32,
+      "metadata": {
+        "description": "Token signing secret: at least 32 random characters, for example from `openssl rand -base64 48`."
+      }
+    },
+    "postgresAdminLogin": {
+      "type": "string",
+      "defaultValue": "todoadmin"
+    },
+    "postgresAdminPassword": {
+      "type": "securestring",
+      "minLength": 12
+    },
+    "postgresVersion": {
+      "type": "string",
+      "defaultValue": "16",
+      "allowedValues": [
+        "16",
+        "17"
+      ]
+    },
+    "postgresSkuName": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "metadata": {
+        "description": "Burstable tier SKU."
+      }
+    },
+    "apiMaxReplicas": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 1,
+      "maxValue": 10
+    },
+    "webMaxReplicas": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 1,
+      "maxValue": 10
+    },
+    "trustProxyHops": {
+      "type": "int",
+      "defaultValue": 3,
+      "metadata": {
+        "description": "Proxies in front of the API: the external ingress, nginx and the API's internal ingress."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "apiAppName": "[format('{0}-api', parameters('namePrefix'))]",
+    "webAppName": "[format('{0}-web', parameters('namePrefix'))]",
+    "databaseName": "todo",
+    "acrPullRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+      "apiVersion": "2024-08-01",
+      "name": "[format('{0}/{1}', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix')), variables('databaseName'))]",
+      "properties": {
+        "charset": "UTF8",
+        "collation": "en_US.utf8"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+      "apiVersion": "2024-08-01",
+      "name": "[format('{0}/{1}', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix')), 'AllowAzureServices')]",
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}-logs-{1}', parameters('namePrefix'), variables('suffix'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix'))]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix'))), variables('acrPullRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[variables('acrPullRoleId')]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix'))), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "apiVersion": "2024-08-01",
+      "name": "[format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix'))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('postgresSkuName')]",
+        "tier": "Burstable"
+      },
+      "properties": {
+        "version": "[parameters('postgresVersion')]",
+        "administratorLogin": "[parameters('postgresAdminLogin')]",
+        "administratorLoginPassword": "[parameters('postgresAdminPassword')]",
+        "authConfig": {
+          "passwordAuth": "Enabled",
+          "activeDirectoryAuth": "Disabled"
+        },
+        "storage": {
+          "storageSizeGB": 32,
+          "autoGrow": "Enabled"
+        },
+        "backup": {
+          "backupRetentionDays": 7,
+          "geoRedundantBackup": "Disabled"
+        },
+        "highAvailability": {
+          "mode": "Disabled"
+        },
+        "network": {
+          "publicNetworkAccess": "Enabled"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}-env-{1}', parameters('namePrefix'), variables('suffix'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('namePrefix'), variables('suffix'))), '2023-09-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('namePrefix'), variables('suffix'))), '2023-09-01').primarySharedKey]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', parameters('namePrefix'), variables('suffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('apiAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix'))))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env-{1}', parameters('namePrefix'), variables('suffix')))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": false,
+            "targetPort": 4000,
+            "transport": "http"
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').loginServer]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix')))]"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "database-url",
+              "value": "[format('postgres://{0}:{1}@{2}:5432/{3}', uriComponent(parameters('postgresAdminLogin')), uriComponent(parameters('postgresAdminPassword')), reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix'))), '2024-08-01').fullyQualifiedDomainName, variables('databaseName'))]"
+            },
+            {
+              "name": "jwt-secret",
+              "value": "[parameters('jwtSecret')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "api",
+              "image": "[format('{0}/{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').loginServer, parameters('apiImage'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "NODE_ENV",
+                  "value": "production"
+                },
+                {
+                  "name": "PORT",
+                  "value": "4000"
+                },
+                {
+                  "name": "DATABASE_URL",
+                  "secretRef": "database-url"
+                },
+                {
+                  "name": "DATABASE_SSL",
+                  "value": "verify-full"
+                },
+                {
+                  "name": "JWT_SECRET",
+                  "secretRef": "jwt-secret"
+                },
+                {
+                  "name": "TRUST_PROXY_HOPS",
+                  "value": "[string(parameters('trustProxyHops'))]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 4000
+                  },
+                  "periodSeconds": 10
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/ready",
+                    "port": 4000
+                  },
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": "[parameters('apiMaxReplicas')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix'))), variables('acrPullRoleId')))]",
+        "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env-{1}', parameters('namePrefix'), variables('suffix')))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix')))]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/firewallRules', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix')), 'AllowAzureServices')]",
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', format('{0}-pg-{1}', parameters('namePrefix'), variables('suffix')), variables('databaseName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('webAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix'))))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env-{1}', parameters('namePrefix'), variables('suffix')))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": true,
+            "targetPort": 8080,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').loginServer]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix')))]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "web",
+              "image": "[format('{0}/{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').loginServer, parameters('webImage'))]",
+              "resources": {
+                "cpu": "[json('0.25')]",
+                "memory": "0.5Gi"
+              },
+              "env": [
+                {
+                  "name": "API_UPSTREAM",
+                  "value": "[format('http://{0}', variables('apiAppName'))]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/",
+                    "port": 8080
+                  },
+                  "periodSeconds": 10
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": "[parameters('webMaxReplicas')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix'))), variables('acrPullRoleId')))]",
+        "[resourceId('Microsoft.App/containerApps', variables('apiAppName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env-{1}', parameters('namePrefix'), variables('suffix')))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-pull-{1}', parameters('namePrefix'), variables('suffix')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('webAppName')), '2024-03-01').configuration.ingress.fqdn)]"
+    }
+  }
+}

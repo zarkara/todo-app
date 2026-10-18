@@ -130,7 +130,6 @@ curl -s localhost:8080/api/tasks -H "authorization: Bearer $TOKEN"
 | Due dates, priorities and filters (completed/active)                                                | 3h       |
 | Browser end-to-end tests (Playwright) in CI; a local script already exercises the compose stack     | 2h       |
 | Pagination or virtualised lists for very large task lists                                           | 2h       |
-| Infrastructure as code (Terraform) for the AWS deployment below                                     | 6h       |
 
 ### Making it more robust
 
@@ -141,25 +140,53 @@ curl -s localhost:8080/api/tasks -H "authorization: Bearer $TOKEN"
 - **Accessibility audit:** run axe in the component tests, and screen-reader testing of drag-and-drop announcements (about 2h).
 - **Dependency hygiene:** Renovate or Dependabot, plus image scanning (Trivy) in CI (about 1h).
 
-## Deploying to a distributed cloud (AWS)
+## Deploying to a distributed cloud (Azure)
 
-The containers are stateless, and the only state lives in PostgreSQL, so the stack maps directly onto managed services:
+`infra/azure/main.bicep` describes the whole deployment, and `infra/azure/azuredeploy.json` is the ARM template compiled from it. The containers are stateless and the only state lives in PostgreSQL, so the stack maps onto managed services:
 
 ```mermaid
 flowchart LR
-  User --> CF["CloudFront"]
-  CF -->|"/*"| WebSvc["ECS Fargate: web (nginx)"]
-  CF -->|"/api/*"| ALB["Application Load Balancer"]
-  ALB --> ApiSvc["ECS Fargate: api × 2+ (multi-AZ)"]
-  ApiSvc --> RDS[("RDS PostgreSQL, Multi-AZ")]
-  ApiSvc -.-> SM["Secrets Manager"]
+  Browser -->|HTTPS| Ingress["Container Apps ingress<br/>(TLS, public)"]
+  Ingress --> Web["web: nginx × 1–3"]
+  Web -->|"/api/* → internal ingress"| Api["api × 1–3<br/>(not reachable from the internet)"]
+  Api -->|"TLS, certificate verified"| PG[("Azure Database for PostgreSQL<br/>Flexible Server")]
+  ACR["Container Registry"] -.->|"pull (managed identity)"| Web
+  ACR -.-> Api
+  Web -.-> Logs["Log Analytics"]
+  Api -.-> Logs
 ```
 
-1. **Images:** CI builds `apps/api/Dockerfile` and `apps/web/Dockerfile` and pushes them to ECR, authenticating with GitHub OIDC (no long-lived keys).
-2. **Database:** RDS PostgreSQL, Multi-AZ, with automated backups. The API gets `DATABASE_URL` from Secrets Manager.
-3. **API:** an ECS Fargate service with at least 2 tasks spread across availability zones, behind an ALB health-checking `/health`. Set `JWT_SECRET` (from Secrets Manager), `TRUST_PROXY_HOPS` to the number of proxies (CloudFront plus ALB), and leave `DEMO_USERS` empty in production.
-4. **Web:** the same nginx image on ECS, or `vite build` output on S3. Either way it sits behind CloudFront, with an `/api/*` behaviour routed to the ALB so the browser stays on one origin.
-5. **Migrations:** the schema step is idempotent and runs at start-up. With several replicas, run it once per deploy as a one-off ECS task before rolling the service.
-6. **Rollout:** `aws ecs update-service --force-new-deployment` (rolling, health-checked). Roll back by redeploying the previous image tag.
+Prerequisites: an Azure subscription and the Azure CLI (`brew install azure-cli`, then `az login`).
 
-On other clouds the mapping is the same: Cloud Run and Cloud SQL on GCP, or Container Apps and Azure Database for PostgreSQL on Azure.
+```sh
+RG=todo-rg REGISTRY=todoacr$RANDOM TAG=1.0.0
+az group create --name $RG --location eastus
+az acr create --resource-group $RG --name $REGISTRY --sku Basic
+
+# Built in Azure for linux/amd64, so an Apple Silicon Mac builds the right architecture.
+az acr build --registry $REGISTRY --image todo-api:$TAG --file apps/api/Dockerfile .
+az acr build --registry $REGISTRY --image todo-web:$TAG --file apps/web/Dockerfile .
+
+# Generate the secrets once and keep them: re-deploying with new values rotates them.
+umask 077; [ -f .azure-secrets ] || printf 'JWT_SECRET=%s\nPG_PASSWORD=%s\n' \
+  "$(openssl rand -base64 48)" "$(openssl rand -base64 24)" > .azure-secrets
+. ./.azure-secrets
+
+az deployment group create --resource-group $RG --template-file infra/azure/azuredeploy.json \
+  --parameters registryName=$REGISTRY apiImage=todo-api:$TAG webImage=todo-web:$TAG \
+    jwtSecret="$JWT_SECRET" postgresAdminPassword="$PG_PASSWORD" \
+  --query properties.outputs.url.value --output tsv
+```
+
+The last command prints the app's HTTPS URL. What the template sets up:
+
+- **Web:** nginx on Container Apps behind the platform's HTTPS ingress (HTTP is redirected), scaling from 1 to 3 replicas. It proxies `/api/` to the API's internal address, so the browser stays on one origin.
+- **API:** internal ingress only. Production mode with no demo users, `JWT_SECRET` and `DATABASE_URL` held as Container Apps secrets, database TLS with certificate verification (`DATABASE_SSL=verify-full`), and liveness (`/health`) and readiness (`/ready`) probes. Migrations run at start-up under a Postgres advisory lock, so several replicas starting together apply them once.
+- **Database:** PostgreSQL Flexible Server (Burstable B1ms, 32 GB with auto-grow, 7-day point-in-time backups). Its firewall admits Azure services only, and it requires TLS.
+- **Images and logs:** pulled from the registry by a managed identity with only the `AcrPull` role, so there are no registry passwords. Container logs go to Log Analytics.
+
+**Releasing a new version:** build the images with a new `TAG` and run the deployment command again. Container Apps starts a new revision and moves traffic once it passes readiness. Roll back by deploying the previous tag. Re-running the deployment with the same values changes nothing.
+
+**Verified so far:** the Bicep compiles and lints cleanly against the Azure resource schemas, and the nginx change it needs passes the full local validation. It hasn't been deployed to a live subscription yet. After the first deploy, confirm that eleven failed sign-ins return 429, and that a forged `X-Forwarded-For` header doesn't reset the limit; that checks `trustProxyHops`, which assumes three proxies in front of the API.
+
+**For a larger deployment:** zone-redundant high availability on the database (`highAvailability: ZoneRedundant`, General Purpose tier); a virtual network with a private endpoint for PostgreSQL instead of the Azure-services firewall rule; Key Vault references for the secrets; and a CI workflow that builds, pushes and deploys with OpenID Connect.
