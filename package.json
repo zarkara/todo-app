@@ -15,7 +15,7 @@
     "test:integration": "vitest run --project=api-integration",
     "test:watch": "vitest --project=!api-integration",
     "test:coverage": "vitest run --coverage",
-    "db:up": "docker compose up -d --wait db",
+    "db:up": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait db",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck --workspaces --if-present",

@@ -5,9 +5,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-todo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-todo}
       POSTGRES_DB: ${POSTGRES_DB:-todo}
-    # Loopback only: reachable for local tests and tools, never from the network.
-    ports:
-      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    # Not published, so a Postgres already running on the Mac can't block start-up.
+    # `npm run db:up` publishes it on loopback for local development (docker-compose.dev.yml).
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

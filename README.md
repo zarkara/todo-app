@@ -23,7 +23,7 @@ Open **http://localhost:8080** and sign in with one of the demo accounts:
 
 Signing in as both, in two browsers, shows that each user sees only their own tasks.
 
-Compose starts three containers: `db` (PostgreSQL 17, bound to `127.0.0.1:5432`), `api` (reachable only through nginx) and `web` (unprivileged nginx on port 8080, which serves the app and proxies `/api` to the API). Data persists in the `db-data` volume; `docker compose down -v` resets it. If a port is taken, override it, for example `WEB_PORT=8081 POSTGRES_PORT=5433 docker compose up --build`.
+Compose starts three containers: `db` (PostgreSQL 17, not published, so a Postgres already running on your Mac doesn't conflict), `api` (reachable only through nginx) and `web` (unprivileged nginx on port 8080, which serves the app and proxies `/api` to the API). Data persists in the `db-data` volume; `docker compose down -v` resets it. If a port is taken, override it, for example `WEB_PORT=8081 docker compose up --build`.
 
 ## Local development
 
@@ -32,7 +32,7 @@ Requires Node 22 (`nvm use` reads `.nvmrc`).
 ```sh
 npm ci
 cp .env.example .env
-npm run db:up          # PostgreSQL in Docker
+npm run db:up          # PostgreSQL in Docker, published on 127.0.0.1:5432 (POSTGRES_PORT to change)
 npm run dev            # API on :4000 with reload, web on http://localhost:5173
 ```
 
@@ -52,6 +52,8 @@ Vite proxies `/api` to the API, so the browser always talks to one origin in dev
 CI (GitHub Actions) runs lint, typecheck and the full suite against a Postgres service container, then builds and starts the whole stack and runs both validation scripts against it, on every branch.
 
 ## Assignment summary
+
+The challenge: build a full-stack to-do list with a minimal REST backend and a responsive web client. Users sign in on a landing page, then see, create, update, delete, reorder and search only their own tasks, and open any task on a detail screen to view or edit it. The deliverables are production-ready, tested code in a git repository, and this README with instructions for running it on a Mac.
 
 ### Overall approach
 
@@ -73,7 +75,7 @@ CI (GitHub Actions) runs lint, typecheck and the full suite against a Postgres s
 - [x] PostgreSQL storage with transactional reorder.
 - [x] Docker images for the API and web, and Compose for the whole stack.
 - [x] Hardening: bcrypt, HS256 JWT with the algorithm pinned, login rate limiting, helmet, a strict CSP from nginx, no internal details in 500 responses.
-- [x] 213 automated tests (192 unit and component, 21 against real Postgres), about 98.6% line coverage, CI on every push to `main` and every pull request.
+- [x] 249 automated tests (221 unit and component, 28 against real Postgres), about 98.7% line coverage. CI runs them on every push and pull request, then starts the whole stack and runs the deploy and security validation scripts against it.
 
 ### Architecture
 
@@ -111,6 +113,7 @@ All `/tasks` routes require `Authorization: Bearer <token>`. Errors always have 
 | `DELETE` | `/tasks/:id`   | —                                      | 204                            | 401, 404      |
 | `PUT`    | `/tasks/order` | `{ ids: string[] }` (every task, once) | 200 `Task[]`                   | 400, 401      |
 | `GET`    | `/health`      | —                                      | 200                            | —             |
+| `GET`    | `/ready`       | —                                      | 200 when the database answers  | 503           |
 
 ```sh
 TOKEN=$(curl -s localhost:8080/api/auth/login -H 'content-type: application/json' \
@@ -124,7 +127,6 @@ curl -s localhost:8080/api/tasks -H "authorization: Bearer $TOKEN"
 | --------------------------------------------------------------------------------------------------- | -------- |
 | Sign-up and password reset (email flow)                                                             | 4h       |
 | httpOnly-cookie sessions with refresh-token rotation, instead of a bearer token in `sessionStorage` | 3h       |
-| Versioned migrations (for example node-pg-migrate) run as a separate deploy step                    | 2h       |
 | Due dates, priorities and filters (completed/active)                                                | 3h       |
 | Browser end-to-end tests (Playwright) in CI; a local script already exercises the compose stack     | 2h       |
 | Pagination or virtualised lists for very large task lists                                           | 2h       |
@@ -133,7 +135,7 @@ curl -s localhost:8080/api/tasks -H "authorization: Bearer $TOKEN"
 ### Making it more robust
 
 - **Concurrent creates:** two simultaneous creates by one user can get the same position. Sorting breaks ties by id, so nothing breaks, but a transaction with `SELECT … FOR UPDATE`, or fractional positions, would remove the tie (about 1h).
-- **Observability:** structured logs (pino) with request ids, metrics for latency and error rate, and a readiness probe that checks the database (about 2h).
+- **Observability:** structured logs (pino) with request ids, and metrics for latency and error rate (about 2h).
 - **Rate limiting across instances:** move the login limiter's store to Redis so the limit holds across API replicas (about 1h).
 - **Optimistic concurrency:** compare `updatedAt` (or an ETag) on PATCH so two tabs can't silently overwrite each other (about 2h).
 - **Accessibility audit:** run axe in the component tests, and screen-reader testing of drag-and-drop announcements (about 2h).

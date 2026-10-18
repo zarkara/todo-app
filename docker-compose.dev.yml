@@ -1,0 +1,5 @@
+# Local development only: publishes Postgres on loopback for `npm run dev` and the integration tests.
+services:
+  db:
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
