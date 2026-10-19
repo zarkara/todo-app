@@ -317,6 +317,71 @@ describe('/tasks', () => {
   });
 });
 
+describe('POST /auth/register', () => {
+  const register = (app: ReturnType<typeof buildApp>, body: object) =>
+    request(app).post('/auth/register').send(body);
+
+  it('creates the account and returns a working session (201)', async () => {
+    const app = buildTestApp();
+
+    const response = await register(app, { email: 'Lin+1@Example.com', password: 'a-new-pass' });
+    const tasks = await request(app)
+      .get('/tasks')
+      .set('authorization', `Bearer ${response.body.token}`);
+
+    expect(response.status).toBe(201);
+    expect(response.body.user).toEqual({ id: expect.any(String), email: 'lin+1@example.com' });
+    expect(tasks.status).toBe(200);
+    expect(tasks.body).toEqual([]);
+  });
+
+  it('lets the new account sign in afterwards', async () => {
+    const app = buildTestApp();
+    await register(app, { email: 'lin@example.com', password: 'a-new-pass' });
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({ email: 'lin@example.com', password: 'a-new-pass' });
+
+    expect(login.status).toBe(200);
+  });
+
+  it('refuses a password outside 8 to 16 characters with a field message (400)', async () => {
+    const response = await register(buildTestApp(), {
+      email: 'lin@example.com',
+      password: 'short',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.details).toEqual([
+      { path: ['password'], message: 'Use 8 to 16 characters' },
+    ]);
+  });
+
+  it('refuses an email that already has an account, in any letter case (409)', async () => {
+    const response = await register(buildTestApp(), {
+      email: 'ADA@example.com',
+      password: 'another-pass',
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toEqual({
+      code: 'EMAIL_TAKEN',
+      message: 'An account with this email already exists',
+    });
+  });
+
+  it('limits sign-ups from one address, counting every attempt (429)', async () => {
+    const app = buildTestApp({ registerRateLimit: { limit: 2, windowMs: 60_000 } });
+
+    await register(app, { email: 'one@example.com', password: 'a-new-pass' });
+    await register(app, { email: 'two@example.com', password: 'a-new-pass' });
+    const blocked = await register(app, { email: 'three@example.com', password: 'a-new-pass' });
+
+    expect(blocked.status).toBe(429);
+  });
+});
+
 describe('hardening', () => {
   it('sets security headers on every response', async () => {
     const response = await request(buildTestApp()).get('/health');

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { UnauthorizedError } from '../domain/errors';
+import { EmailTakenError, UnauthorizedError } from '../domain/errors';
 import { createInMemoryUserRepository } from '../repositories/userRepository';
 import { hashPassword } from '../security/passwords';
 import { createTokenService, type TokenService } from '../security/tokens';
@@ -10,6 +10,7 @@ const PASSWORD = 'correct horse';
 describe('authService', () => {
   let service: AuthService;
   let tokens: TokenService;
+  let registered = 0;
 
   beforeAll(async () => {
     const users = createInMemoryUserRepository([
@@ -20,7 +21,38 @@ describe('authService', () => {
       ttlSeconds: 3600,
       clock: () => new Date(),
     });
-    service = createAuthService({ users, tokens });
+    service = createAuthService({
+      users,
+      tokens,
+      hash: (password) => hashPassword(password, 4),
+      newId: () => `user-${++registered}`,
+    });
+  });
+
+  describe('register', () => {
+    it('creates the account and signs the new user in', async () => {
+      const { token, user } = await service.register({
+        email: 'lin@example.com',
+        password: 'a-new-pass',
+      });
+
+      expect(user).toEqual({ id: `user-${registered}`, email: 'lin@example.com' });
+      await expect(service.authenticate(token)).resolves.toEqual({ userId: user.id });
+    });
+
+    it('stores the password so the new user can sign in with it later', async () => {
+      await service.register({ email: 'kim@example.com', password: 'kims-pass' });
+
+      const { user } = await service.login({ email: 'kim@example.com', password: 'kims-pass' });
+
+      expect(user.email).toBe('kim@example.com');
+    });
+
+    it('refuses an email that already has an account', async () => {
+      await expect(
+        service.register({ email: 'ada@example.com', password: 'another-pass' }),
+      ).rejects.toBeInstanceOf(EmailTakenError);
+    });
   });
 
   describe('login', () => {
