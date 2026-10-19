@@ -1,4 +1,5 @@
 import type pg from 'pg';
+import { EmailTakenError } from '../domain/errors';
 import type { User } from '../domain/user';
 import type { UserRepository } from './userRepository';
 
@@ -7,6 +8,15 @@ interface UserRow {
   email: string;
   password_hash: string;
 }
+
+// Postgres unique_violation on the case-insensitive email index.
+const isEmailTaken = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  error.code === '23505' &&
+  'constraint' in error &&
+  error.constraint === 'users_email_key';
 
 const toUser = ({ id, email, password_hash }: UserRow): User => ({
   id,
@@ -28,6 +38,19 @@ export const createPostgresUserRepository = (pool: pg.Pool): UserRepository => (
       [id],
     );
     return rows.map(toUser)[0];
+  },
+  create: async (user) => {
+    try {
+      await pool.query('INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)', [
+        user.id,
+        user.email,
+        user.passwordHash,
+      ]);
+    } catch (error) {
+      if (isEmailTaken(error)) throw new EmailTakenError();
+      throw error;
+    }
+    return { ...user };
   },
   save: async (user) => {
     await pool.query(

@@ -3,6 +3,7 @@ import type {
   authResponseSchema,
   createTaskSchema,
   loginSchema,
+  registerSchema,
   publicUserSchema,
   reorderTasksSchema,
   taskSchema,
@@ -10,6 +11,7 @@ import type {
 } from './schemas';
 
 export type Credentials = z.infer<typeof loginSchema>;
+export type Registration = z.infer<typeof registerSchema>;
 export type NewTask = z.infer<typeof createTaskSchema>;
 export type TaskPatch = z.infer<typeof updateTaskSchema>;
 export type ReorderRequest = z.infer<typeof reorderTasksSchema>;

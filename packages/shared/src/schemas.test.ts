@@ -4,7 +4,10 @@ import {
   listTasksQuerySchema,
   loginSchema,
   MAX_DESCRIPTION_LENGTH,
+  MAX_PASSWORD_LENGTH,
   MAX_TITLE_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  registerSchema,
   reorderTasksSchema,
   updateTaskSchema,
 } from './schemas';
@@ -23,6 +26,49 @@ describe('loginSchema', () => {
     ['missing fields', {}],
   ])('rejects %s', (_label, input) => {
     expect(loginSchema.safeParse(input).success).toBe(false);
+  });
+});
+
+describe('registerSchema', () => {
+  const password = (length: number) => 'p'.repeat(length);
+
+  it('normalises the email address and keeps a + suffix', () => {
+    expect(
+      registerSchema.parse({
+        email: ' You+1@Example.COM ',
+        password: password(MIN_PASSWORD_LENGTH),
+      }),
+    ).toEqual({ email: 'you+1@example.com', password: password(MIN_PASSWORD_LENGTH) });
+  });
+
+  it('accepts passwords of 8 to 16 characters', () => {
+    expect([MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH]).toEqual([8, 16]);
+    for (const length of [MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH]) {
+      expect(
+        registerSchema.safeParse({ email: 'ada@example.com', password: password(length) }).success,
+      ).toBe(true);
+    }
+  });
+
+  it.each([
+    [
+      'a password that is too short',
+      { email: 'ada@example.com', password: password(MIN_PASSWORD_LENGTH - 1) },
+    ],
+    [
+      'a password that is too long',
+      { email: 'ada@example.com', password: password(MAX_PASSWORD_LENGTH + 1) },
+    ],
+    ['a malformed email', { email: 'not-an-email', password: password(MIN_PASSWORD_LENGTH) }],
+    ['missing fields', {}],
+  ])('rejects %s', (_label, input) => {
+    expect(registerSchema.safeParse(input).success).toBe(false);
+  });
+
+  it('explains the password rule', () => {
+    const result = registerSchema.safeParse({ email: 'ada@example.com', password: 'short' });
+
+    expect(result.error?.issues[0]?.message).toBe('Use 8 to 16 characters');
   });
 });
 

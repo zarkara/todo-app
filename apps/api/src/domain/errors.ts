@@ -1,4 +1,5 @@
-export type ErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'UNAUTHORIZED' | 'RATE_LIMITED';
+export type ErrorCode =
+  'NOT_FOUND' | 'VALIDATION' | 'UNAUTHORIZED' | 'EMAIL_TAKEN' | 'RATE_LIMITED';
 
 // Expected business failures; the HTTP layer maps each code to a status.
 export class AppError extends Error {
@@ -27,6 +28,12 @@ export class ValidationError extends AppError {
 export class UnauthorizedError extends AppError {
   constructor(message = 'Authentication required') {
     super('UNAUTHORIZED', message);
+  }
+}
+
+export class EmailTakenError extends AppError {
+  constructor(message = 'An account with this email already exists') {
+    super('EMAIL_TAKEN', message);
   }
 }
 

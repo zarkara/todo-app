@@ -6,6 +6,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   VALIDATION: 400,
   UNAUTHORIZED: 401,
+  EMAIL_TAKEN: 409,
   RATE_LIMITED: 429,
 };
 
