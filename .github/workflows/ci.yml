@@ -50,6 +50,10 @@ jobs:
       # the next converge would recreate it once.
       - run: docker compose build
       - run: docker compose up -d --wait
+      # First, on the fresh stack, so the new-account empty list is checked too.
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run smoke
       - run: ./scripts/validate-deploy.sh
       - run: ./scripts/validate-security.sh
       - if: failure()

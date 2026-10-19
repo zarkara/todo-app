@@ -23,6 +23,38 @@ Open **http://localhost:8080** and sign in with one of the demo accounts:
 
 Signing in as both, in two browsers, shows that each user sees only their own tasks.
 
+**Using it:** the app opens on the sign-in page. After signing in you land on "Your tasks", which starts empty. Add tasks in the box at the top; tick one to mark it done; search from the search box (the search is kept in the URL); reorder by dragging the handle or with the ▲/▼ buttons; and click a task to open its detail screen, where you can edit the title, description and done state, or delete it. Your session lasts for the browser tab (eight hours at most); **Sign out** ends it.
+
+**Accounts:** there is no sign-up screen. The API creates the accounts listed in `DEMO_USERS` (comma-separated `email:password` pairs) every time it starts, keeping existing accounts and their tasks. To add your own:
+
+```sh
+DEMO_USERS='me@example.com:a-long-password,demo@example.com:password123' docker compose up --build
+```
+
+Demo accounts are refused in production mode (`NODE_ENV=production`), so a production deployment has no way to create accounts yet; sign-up is listed under "Given more time".
+
+### Smoke test: check the first-time user experience
+
+With the stack running, this drives a real browser through what a new user does, and cleans up after itself:
+
+```sh
+npm ci
+npx playwright install chromium   # once: the browser it drives
+npm run smoke
+```
+
+Expect 18 passing steps, ending in `First-time user journey works`:
+
+1. Opening the app shows the sign-in page; an empty form explains what's missing; a wrong password is refused with "Invalid email or password".
+2. Signing in as `demo@example.com` opens "Your tasks", with the account in the header and, for a new account, an empty list with a hint.
+3. Adding three tasks lists them in order; a blank title is refused; ticking a task keeps it done after a reload.
+4. Search narrows the list, is kept in the URL and survives a reload; moving a task up saves the new order.
+5. A task's detail screen saves edits; deleting asks for confirmation; signing out locks the list again.
+6. On a phone-sized screen, `grace@example.com` follows a link to one of demo's tasks, signs in, lands on that link, and gets "Task not found"; her list shows none of demo's tasks, and the page fits the screen.
+7. The browser console shows no unexpected errors.
+
+A failure names the step and what it saw. If the app isn't running, it says how to start it. Set `SMOKE_URL` to test another address.
+
 Compose starts three containers: `db` (PostgreSQL 17, not published, so a Postgres already running on your Mac doesn't conflict), `api` (reachable only through nginx) and `web` (unprivileged nginx on port 8080, which serves the app and proxies `/api` to the API). Data persists in the `db-data` volume; `docker compose down -v` resets it. If a port is taken, override it, for example `WEB_PORT=8081 docker compose up --build`.
 
 ## Local development
@@ -46,6 +78,7 @@ Vite proxies `/api` to the API, so the browser always talks to one origin in dev
 | `npm run lint`                   | ESLint (bans `console` and TODO/FIXME comments) and Prettier                                                                                                                                 |
 | `npm run typecheck`              | `tsc` in strict mode for every workspace                                                                                                                                                     |
 | `npm run check`                  | lint, typecheck and unit tests: the gate used before each commit                                                                                                                             |
+| `npm run smoke`                  | Against a running stack: the first-time user journey in a real browser (see Smoke test above)                                                                                                |
 | `./scripts/validate-deploy.sh`   | Against a running stack: proves re-deploying is idempotent (no recreation, migrations and seeding no-ops, data kept)                                                                         |
 | `./scripts/validate-security.sh` | Against a running stack: validates every security layer (edge headers, network exposure, non-root containers, production guard, authentication, authorization, error hygiene, rate limiting) |
 
