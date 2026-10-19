@@ -62,6 +62,28 @@ listed=$(curl -s "$WEB_URL/api/tasks?q=$title" -H "authorization: Bearer $token"
 verdict 'data written before a forced redeploy is still there after it' 'grep -q "$title" <<<"$listed"'
 curl -s -o /dev/null -X DELETE "$WEB_URL/api/tasks/$id" -H "authorization: Bearer $token"
 
+# 6. Replacing the API container while web keeps running (an API-only update) keeps the app
+#    reachable: nginx must look the API up again rather than keep the address it found at start-up.
+#    A throwaway container takes the API's old address, so the new API container gets a different one.
+ip_of() { docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$1"; }
+api_container=$(docker compose ps -q api)
+network=$(docker inspect -f '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{end}}' "$api_container")
+old_ip=$(ip_of "$api_container")
+docker compose rm -sf api >/dev/null 2>&1
+squatter=$(docker run -d --rm --network "$network" "$(docker compose config --images | grep postgres)" sleep 120)
+docker compose up -d --no-build --wait api >/dev/null 2>&1
+new_ip=$(ip_of "$(docker compose ps -q api)")
+reachable() {
+  for _ in $(seq 1 20); do
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "$WEB_URL/api/ready")" = 200 ] && return 0
+    sleep 1
+  done
+  return 1
+}
+verdict 'the app stays reachable when the API container is replaced on its own (new address)' \
+  '[ "$old_ip" != "$new_ip" ] && reachable || { echo "      API address $old_ip -> $new_ip"; false; }'
+docker rm -f "$squatter" >/dev/null 2>&1
+
 echo
 if [ "$failures" -eq 0 ]; then echo "Deployment is idempotent"; else echo "$failures deploy check(s) failed"; fi
 exit $((failures > 0))

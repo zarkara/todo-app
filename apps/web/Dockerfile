@@ -15,5 +15,7 @@ FROM nginxinc/nginx-unprivileged:1.28-alpine
 # Rendered to /etc/nginx/conf.d/default.conf at start-up, substituting API_UPSTREAM only.
 COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
 ENV API_UPSTREAM=http://api:4000
+# Lets the entrypoint export NGINX_LOCAL_RESOLVERS for the resolver directive.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 8080

@@ -75,7 +75,7 @@ Vite proxies `/api` to the API, so the browser always talks to one origin in dev
 | `npm run typecheck`              | `tsc` in strict mode for every workspace                                                                                                                                                              |
 | `npm run check`                  | lint, typecheck and unit tests: the gate used before each commit                                                                                                                                      |
 | `npm run smoke`                  | Against a running stack: the first-time user journey in a real browser (see Smoke test above)                                                                                                         |
-| `./scripts/validate-deploy.sh`   | Against a running stack: proves re-deploying is idempotent (no recreation, migrations and seeding no-ops, data kept)                                                                                  |
+| `./scripts/validate-deploy.sh`   | Against a running stack: proves re-deploying is idempotent (no recreation, migrations and seeding no-ops, data kept, and the app still reachable after the API alone is replaced)                     |
 | `./scripts/validate-security.sh` | Against a running stack: validates every security layer (edge headers, network exposure, non-root containers, production guard, authentication, sign-up, authorization, error hygiene, rate limiting) |
 
 CI (GitHub Actions) runs lint, typecheck and the full suite against a Postgres service container, then builds and starts the whole stack and runs both validation scripts against it, on every branch.
