@@ -156,13 +156,15 @@ curl -s localhost:8080/api/tasks -H "authorization: Bearer $TOKEN"
 
 ### Given more time
 
-| Item                                                                                                | Estimate |
-| --------------------------------------------------------------------------------------------------- | -------- |
-| Sign-up and password reset (email flow)                                                             | 4h       |
-| httpOnly-cookie sessions with refresh-token rotation, instead of a bearer token in `sessionStorage` | 3h       |
-| Due dates, priorities and filters (completed/active)                                                | 3h       |
-| Browser end-to-end tests (Playwright) in CI; a local script already exercises the compose stack     | 2h       |
-| Pagination or virtualised lists for very large task lists                                           | 2h       |
+| Item                                                                                                                                                                                                                                                                                                                                          | Estimate |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Account verification by email or SMS while keeping our own accounts: a one-time code sent through a provider such as Azure Communication Services, confirmed before first sign-in (External ID, below, includes this)                                                                                                                         | 4h       |
+| Hosted sign-in with Microsoft Entra External ID (CIAM), replacing our own passwords: Microsoft's hosted sign-up and sign-in pages verify the email address with a one-time code and can add SMS verification; the web app signs in with MSAL (OpenID Connect with PKCE), and the API validates the tenant's tokens instead of issuing its own | 6h       |
+| Password reset by email (builds on the email delivery above)                                                                                                                                                                                                                                                                                  | 2h       |
+| In production, ignore the `+` suffix when checking whether an email is taken, so `you+1@…` and `you+2@…` count as one account: store a canonical form (`you@…`) with a unique index, and keep the address as typed for display and delivery. Test environments keep the suffix, so one inbox can hold many test accounts                      | 1h       |
+| httpOnly-cookie sessions with refresh-token rotation, instead of a bearer token in `sessionStorage`                                                                                                                                                                                                                                           | 3h       |
+| Due dates, priorities and filters (completed/active)                                                                                                                                                                                                                                                                                          | 3h       |
+| Pagination or virtualised lists for very large task lists                                                                                                                                                                                                                                                                                     | 2h       |
 
 ### Making it more robust
 
