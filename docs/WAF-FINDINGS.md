@@ -59,15 +59,15 @@ These findings come from the local deployment target. Each was checked against `
 
 ## Phase 2 and later
 
-| ID             | Pillar                 | Risk         | Finding                                                      | Planned fix                                                                 | Status  |
-| -------------- | ---------------------- | ------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------- | ------- |
-| OPS-2          | Operational excellence | Medium       | No observability                                             | JSON logs with request ids; a health check that alerts when the app is down | Planned |
-| AUTH-3         | Security               | Medium       | Tokens can't be revoked                                      | Token version per user, short-lived tokens with refresh                     | Planned |
-| AUTH-5         | Security               | Medium       | Bearer token readable by page scripts                        | httpOnly cookie session with CSRF protection                                | Planned |
-| AUTH-7 / REL-3 | Security, Reliability  | Low / Medium | Rate limit per IP only                                       | In-memory per-account limit (one instance)                                  | Planned |
-| AUTH-8         | Security               | Low          | No password policy (sign-up now requires 8 to 16 characters) | Allow longer passphrases (NIST: at least 64) and check breached passwords   | Planned |
-| AUTH-9         | Security               | Low          | No authentication audit trail                                | Structured security events and alarms                                       | Planned |
-| PERF-1         | Performance            | Medium       | Search filters in Node, not SQL                              | `ILIKE` with a `pg_trgm` index                                              | Planned |
-| PERF-2         | Performance            | Medium       | No pagination                                                | Cursor pagination                                                           | Planned |
-| PERF-3         | Performance            | Low          | Reorder issues one upsert per task                           | Single `UPDATE … FROM unnest(...)`                                          | Planned |
-| PERF-4         | Performance            | Low          | Pure-JS bcrypt is CPU-heavy                                  | Native bcrypt or argon2                                                     | Planned |
+| ID             | Pillar                 | Risk         | Finding                                                                                      | Planned fix                                                                 | Status  |
+| -------------- | ---------------------- | ------------ | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------- |
+| OPS-2          | Operational excellence | Medium       | No observability                                                                             | JSON logs with request ids; a health check that alerts when the app is down | Planned |
+| AUTH-3         | Security               | Medium       | Tokens can't be revoked                                                                      | Token version per user, short-lived tokens with refresh                     | Planned |
+| AUTH-5         | Security               | Medium       | Bearer token readable by page scripts                                                        | httpOnly cookie session with CSRF protection                                | Planned |
+| AUTH-7 / REL-3 | Security, Reliability  | Low / Medium | Rate limit per IP only                                                                       | In-memory per-account limit (one instance)                                  | Planned |
+| AUTH-8         | Security               | Low          | No password policy (sign-up now requires 8 to 64 characters, per NIST, and at most 72 bytes) | Check new passwords against known breached passwords                        | Planned |
+| AUTH-9         | Security               | Low          | No authentication audit trail                                                                | Structured security events and alarms                                       | Planned |
+| PERF-1         | Performance            | Medium       | Search filters in Node, not SQL                                                              | `ILIKE` with a `pg_trgm` index                                              | Planned |
+| PERF-2         | Performance            | Medium       | No pagination                                                                                | Cursor pagination                                                           | Planned |
+| PERF-3         | Performance            | Low          | Reorder issues one upsert per task                                                           | Single `UPDATE … FROM unnest(...)`                                          | Planned |
+| PERF-4         | Performance            | Low          | Pure-JS bcrypt is CPU-heavy                                                                  | Native bcrypt or argon2                                                     | Planned |

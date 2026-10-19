@@ -148,16 +148,16 @@ const newUserJourney = (page, state) => [
     async () => {
       await page.getByRole('link', { name: 'Create an account' }).click();
       await page.getByRole('heading', { name: 'Create an account' }).waitFor();
-      await page.getByText('8 to 16 characters').waitFor();
+      await page.getByText('8 to 64 characters').waitFor();
     },
   ],
   [
-    'A password outside 8 to 16 characters is refused before anything is sent',
+    'A password outside 8 to 64 characters is refused before anything is sent',
     async () => {
       await page.getByLabel('Email').fill(NEW_USER);
       await page.getByLabel('Password').fill('short');
       await page.getByRole('button', { name: 'Create account' }).click();
-      await page.getByText('Use 8 to 16 characters').waitFor();
+      await page.getByText('Use 8 to 64 characters').waitFor();
     },
   ],
   [

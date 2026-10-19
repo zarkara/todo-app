@@ -276,15 +276,16 @@ const signUpLayer = async () => {
     duplicate.status === 409 && duplicate.body.error?.code === 'EMAIL_TAKEN',
     `status ${duplicate.status}`,
   );
-  const [tooShort, tooLong] = await Promise.all([
+  const [tooShort, tooLong, tooManyBytes] = await Promise.all([
     register(freshEmail('short'), 'x'.repeat(7)),
-    register(freshEmail('long'), 'x'.repeat(17)),
+    register(freshEmail('long'), 'x'.repeat(65)),
+    register(freshEmail('bytes'), 'é'.repeat(40)),
   ]);
   check(
     'sign-up',
-    'passwords outside 8 to 16 characters are refused (400)',
-    tooShort.status === 400 && tooLong.status === 400,
-    `statuses ${tooShort.status} and ${tooLong.status}`,
+    'passwords outside 8 to 64 characters, or over 72 bytes (bcrypt would ignore the rest), are refused (400)',
+    [tooShort, tooLong, tooManyBytes].every(({ status }) => status === 400),
+    `statuses ${[tooShort, tooLong, tooManyBytes].map(({ status }) => status).join(', ')}`,
   );
   check(
     'sign-up',

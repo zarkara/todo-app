@@ -41,8 +41,8 @@ describe('registerSchema', () => {
     ).toEqual({ email: 'you+1@example.com', password: password(MIN_PASSWORD_LENGTH) });
   });
 
-  it('accepts passwords of 8 to 16 characters', () => {
-    expect([MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH]).toEqual([8, 16]);
+  it('accepts passwords of 8 to 64 characters (NIST SP 800-63B)', () => {
+    expect([MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH]).toEqual([8, 64]);
     for (const length of [MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH]) {
       expect(
         registerSchema.safeParse({ email: 'ada@example.com', password: password(length) }).success,
@@ -68,7 +68,17 @@ describe('registerSchema', () => {
   it('explains the password rule', () => {
     const result = registerSchema.safeParse({ email: 'ada@example.com', password: 'short' });
 
-    expect(result.error?.issues[0]?.message).toBe('Use 8 to 16 characters');
+    expect(result.error?.issues[0]?.message).toBe('Use 8 to 64 characters');
+  });
+
+  it('refuses a password bcrypt would truncate (over 72 bytes), rather than ignoring the rest', () => {
+    const accented = 'é'.repeat(40); // 40 characters, 80 bytes
+
+    const result = registerSchema.safeParse({ email: 'ada@example.com', password: accented });
+
+    expect(result.error?.issues[0]?.message).toBe(
+      'Too long: use fewer accented letters, symbols or emoji',
+    );
   });
 });
 

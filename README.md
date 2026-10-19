@@ -14,7 +14,7 @@ cd todo-app
 docker compose up --build
 ```
 
-Open **http://localhost:8080** and choose **Create an account** (any email address, a password of 8 to 16 characters), or sign in with one of the demo accounts:
+Open **http://localhost:8080** and choose **Create an account** (any email address, a password of 8 to 64 characters), or sign in with one of the demo accounts:
 
 | Email               | Password      |
 | ------------------- | ------------- |
@@ -25,7 +25,7 @@ Signing in as both, in two browsers, shows that each user sees only their own ta
 
 **Using it:** the app opens on the sign-in page. After signing up or signing in you land on "Your tasks", which starts empty. Add tasks in the box at the top; tick one to mark it done; search from the search box (the search is kept in the URL); reorder by dragging the handle or with the ▲/▼ buttons; and click a task to open its detail screen, where you can edit the title, description and done state, or delete it. Your session lasts for the browser tab (eight hours at most); **Sign out** ends it.
 
-**Accounts:** anyone can create an account from the sign-in page. Email addresses aren't verified (this is a test app; verification is under "Given more time"), so any address works, and plus addressing (`you+1@gmail.com`, `you+2@gmail.com`) gives you as many test accounts as you like from one inbox. A new account is signed straight in. Passwords are 8 to 16 characters; an email that already has an account is refused, in any letter case; and one address can create 5 accounts an hour.
+**Accounts:** anyone can create an account from the sign-in page. Email addresses aren't verified (this is a test app; verification is under "Given more time"), so any address works, and plus addressing (`you+1@gmail.com`, `you+2@gmail.com`) gives you as many test accounts as you like from one inbox. A new account is signed straight in. Passwords are 8 to 64 characters, so passphrases work (NIST SP 800-63B), with no rules about symbols; an email that already has an account is refused, in any letter case; and one address can create 5 accounts an hour.
 
 The demo accounts come from `DEMO_USERS` (comma-separated `email:password` pairs), which the API creates on every start, keeping existing accounts and their tasks. Production mode (`NODE_ENV=production`) refuses demo accounts, so there users sign up instead.
 
@@ -94,7 +94,7 @@ The challenge: build a full-stack to-do list with a minimal REST backend and a r
 
 ### Features completed
 
-- [x] Sign-in page as the landing page, with **Create an account** (signed straight in; passwords of 8 to 16 characters). After signing in, users return to the page they originally requested.
+- [x] Sign-in page as the landing page, with **Create an account** (signed straight in; passwords of 8 to 64 characters). After signing in, users return to the page they originally requested.
 - [x] Per-user data: another user's task looks exactly like a missing one (404).
 - [x] Task list with search (debounced, kept in the URL so it survives reloads and can be shared).
 - [x] Create, toggle done, edit on a detail screen, and delete (with confirmation).
@@ -134,7 +134,7 @@ All `/tasks` routes require `Authorization: Bearer <token>`. Errors always have 
 
 | Method   | Path             | Body                                    | Success                        | Errors        |
 | -------- | ---------------- | --------------------------------------- | ------------------------------ | ------------- |
-| `POST`   | `/auth/register` | `{ email, password }` (8–16 characters) | 201 `{ token, user }`          | 400, 409, 429 |
+| `POST`   | `/auth/register` | `{ email, password }` (8–64 characters) | 201 `{ token, user }`          | 400, 409, 429 |
 | `POST`   | `/auth/login`    | `{ email, password }`                   | 200 `{ token, user }`          | 400, 401, 429 |
 | `GET`    | `/tasks?q=`      | —                                       | 200 `Task[]` in position order | 401           |
 | `POST`   | `/tasks`         | `{ title, description? }`               | 201 `Task`, appended last      | 400, 401      |

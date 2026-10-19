@@ -14,12 +14,12 @@ Accounts exist only through `DEMO_USERS`, which production mode refuses, so a pr
 
 | Case                                             | Result                                                                                 |
 | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| Valid email, password 8–16 characters            | `201 { token, user }`; the browser is signed in and shows "Your tasks" (empty)         |
+| Valid email, password 8–64 characters            | `201 { token, user }`; the browser is signed in and shows "Your tasks" (empty)         |
 | Email already registered (any letter case)       | `409 EMAIL_TAKEN`: "An account with this email already exists." with a link to sign in |
 | Invalid email, or password too short or too long | `400 VALIDATION_ERROR` with field messages, shown under the fields                     |
 | Too many sign-ups from one address               | `429 RATE_LIMITED` (5 per hour, every attempt counts)                                  |
 
-- **Password rule:** 8 to 16 characters, with no composition rules. The 16-character maximum is a product decision; NIST SP 800-63B recommends allowing at least 64 so people can use passphrases, so it is the first thing to revisit.
+- **Password rule:** 8 to 64 characters, with no composition rules (NIST SP 800-63B), so passphrases work. bcrypt only uses the first 72 bytes, so a password over 72 bytes (possible within 64 characters with accented letters or emoji) is refused rather than silently truncated.
 - **Emails** are trimmed and lower-cased, as they are for sign-in.
 - **Enumeration:** a 409 reveals that an address is registered. That is inherent to sign-up without email verification and accepted here; the rate limit bounds how fast addresses can be probed.
 
@@ -61,7 +61,7 @@ Estimate: about 4 hours.
 
 1. Sign-up is open in every environment, production included.
 2. Signing up signs the new user straight in.
-3. Passwords are 8 to 16 characters.
+3. Passwords are 8 to 64 characters, following NIST guidance (first set at 8 to 16, then raised).
 
 ## Known trade-offs
 

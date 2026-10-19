@@ -38,11 +38,11 @@ describe('SignUpPage', () => {
   it('states the password rule up front and checks the fields before calling the API', async () => {
     const { user } = renderApp({ route: '/signup' });
 
-    expect(await screen.findByText('8 to 16 characters')).toBeInTheDocument();
+    expect(await screen.findByText('8 to 64 characters')).toBeInTheDocument();
     await fillIn(user, 'not-an-email', 'short');
 
     expect(await screen.findByText('Enter a valid email address')).toBeInTheDocument();
-    expect(screen.getByText('Use 8 to 16 characters')).toBeInTheDocument();
+    expect(screen.getByText('Use 8 to 64 characters')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true');
   });
 

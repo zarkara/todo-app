@@ -346,7 +346,7 @@ describe('POST /auth/register', () => {
     expect(login.status).toBe(200);
   });
 
-  it('refuses a password outside 8 to 16 characters with a field message (400)', async () => {
+  it('refuses a password outside 8 to 64 characters with a field message (400)', async () => {
     const response = await register(buildTestApp(), {
       email: 'lin@example.com',
       password: 'short',
@@ -354,7 +354,7 @@ describe('POST /auth/register', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.error.details).toEqual([
-      { path: ['password'], message: 'Use 8 to 16 characters' },
+      { path: ['password'], message: 'Use 8 to 64 characters' },
     ]);
   });
 
