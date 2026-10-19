@@ -1,6 +1,6 @@
 import { loginSchema } from '@todo/shared';
 import { type FormEvent, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useSession, useSignIn } from '../auth/SessionProvider';
 import { TextField } from '../components/TextField';
 
@@ -63,6 +63,9 @@ export const SignInPage = () => {
         <button type="submit" className="button button-block" disabled={signIn.isPending}>
           Sign in
         </button>
+        <p className="form-footer">
+          New here? <Link to="/signup">Create an account</Link>
+        </p>
       </form>
     </main>
   );

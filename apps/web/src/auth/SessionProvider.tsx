@@ -1,4 +1,4 @@
-import type { Credentials } from '@todo/shared';
+import type { AuthResponse, Credentials, Registration } from '@todo/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createContext,
@@ -31,18 +31,28 @@ export const useSession = () => {
   return useSyncExternalStore(store.subscribe, store.getSession);
 };
 
-export const useSignIn = () => {
-  const api = useApiClient();
+// Signing in and signing up both end by starting a session for the returned user.
+const useStartSession = <Input,>(request: (input: Input) => Promise<AuthResponse>) => {
   const store = useSessionStore();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (credentials: Credentials) => api.login(credentials),
+    mutationFn: request,
     onSuccess: (session) => {
       // Never show one user's cached tasks to the next.
       queryClient.removeQueries();
       store.setSession(session);
     },
   });
+};
+
+export const useSignIn = () => {
+  const api = useApiClient();
+  return useStartSession((credentials: Credentials) => api.login(credentials));
+};
+
+export const useRegister = () => {
+  const api = useApiClient();
+  return useStartSession((registration: Registration) => api.register(registration));
 };
 
 export const useSignOut = () => {

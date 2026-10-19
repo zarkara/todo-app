@@ -37,6 +37,24 @@ describe('apiClient', () => {
     ).toEqual({ token: 'token-123', user: { id: 'ada', email: 'ada@example.com' } });
   });
 
+  it('registers a new account and returns the auth response', async () => {
+    let body: unknown;
+    server.use(
+      http.post(`${BASE_URL}/auth/register`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(
+          { token: 'token-new', user: { id: 'lin', email: 'lin@example.com' } },
+          { status: 201 },
+        );
+      }),
+    );
+
+    expect(
+      await clientWithToken(null).register({ email: 'lin@example.com', password: 'a-new-pass' }),
+    ).toEqual({ token: 'token-new', user: { id: 'lin', email: 'lin@example.com' } });
+    expect(body).toEqual({ email: 'lin@example.com', password: 'a-new-pass' });
+  });
+
   it('sends the bearer token and the search query', async () => {
     let seen = { authorization: '', query: '' };
     server.use(

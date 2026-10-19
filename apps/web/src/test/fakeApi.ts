@@ -34,8 +34,10 @@ export const createFakeApi = (seed: Task[] = []) => {
   let tasks = [...seed];
   let createdCount = 0;
 
+  const users = [...USERS];
+
   const userIdOf = (request: Request) =>
-    USERS.find(({ id }) => request.headers.get('Authorization') === `Bearer ${tokenFor(id)}`)?.id;
+    users.find(({ id }) => request.headers.get('Authorization') === `Bearer ${tokenFor(id)}`)?.id;
 
   const ownTasks = (userId: string) =>
     tasks.filter((task) => task.userId === userId).toSorted((a, b) => a.position - b.position);
@@ -56,10 +58,19 @@ export const createFakeApi = (seed: Task[] = []) => {
   const handlers = [
     http.post(`${API_URL}/auth/login`, async ({ request }) => {
       const { email, password } = (await request.json()) as { email: string; password: string };
-      const user = USERS.find((candidate) => candidate.email === email);
+      const user = users.find((candidate) => candidate.email === email);
       return user && password === PASSWORD
         ? HttpResponse.json({ token: tokenFor(user.id), user })
         : errorResponse(401, 'UNAUTHORIZED', 'Invalid email or password');
+    }),
+    http.post(`${API_URL}/auth/register`, async ({ request }) => {
+      const { email } = (await request.json()) as { email: string };
+      if (users.some((candidate) => candidate.email === email)) {
+        return errorResponse(409, 'EMAIL_TAKEN', 'An account with this email already exists');
+      }
+      const user = { id: `user-${users.length + 1}`, email };
+      users.push(user);
+      return HttpResponse.json({ token: tokenFor(user.id), user }, { status: 201 });
     }),
     http.get(
       `${API_URL}/tasks`,

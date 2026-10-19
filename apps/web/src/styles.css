@@ -163,6 +163,18 @@ textarea.input {
   resize: vertical;
 }
 
+.field-hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.form-footer {
+  margin: 0;
+  text-align: center;
+  color: var(--color-muted);
+}
+
 .field-error {
   margin: 0;
   color: var(--color-danger);

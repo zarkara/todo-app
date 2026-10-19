@@ -2,6 +2,7 @@ import {
   authResponseSchema,
   type Credentials,
   type NewTask,
+  type Registration,
   type TaskPatch,
   taskSchema,
 } from '@todo/shared';
@@ -81,6 +82,8 @@ export const createApiClient = ({ baseUrl, getToken }: ApiClientOptions) => {
   return {
     login: (credentials: Credentials) =>
       sendForJson('/auth/login', authResponseSchema, { method: 'POST', body: credentials }),
+    register: (registration: Registration) =>
+      sendForJson('/auth/register', authResponseSchema, { method: 'POST', body: registration }),
     listTasks: (query = '') => sendForJson(`/tasks${searchSuffix(query)}`, tasksSchema),
     getTask: (id: string) => sendForJson(taskPath(id), taskSchema),
     createTask: (input: NewTask) =>

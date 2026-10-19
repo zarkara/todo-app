@@ -6,6 +6,7 @@ import { SessionProvider } from './auth/SessionProvider';
 import type { SessionStore } from './auth/sessionStore';
 import { RequireAuth } from './components/RequireAuth';
 import { SignInPage } from './pages/SignInPage';
+import { SignUpPage } from './pages/SignUpPage';
 import { TaskDetailPage } from './pages/TaskDetailPage';
 import { TaskListPage } from './pages/TaskListPage';
 
@@ -25,6 +26,7 @@ export const App = ({ store, client, queryClient }: AppProps) => (
       <SessionProvider store={store}>
         <Routes>
           <Route path="/login" element={<SignInPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
           <Route element={<RequireAuth />}>
             <Route path="/tasks" element={<TaskListPage />} />
             <Route path="/tasks/:id" element={<TaskDetailPage />} />
