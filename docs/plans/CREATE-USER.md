@@ -33,7 +33,7 @@ Use plus addressing (sub-addressing) to create as many test accounts as needed f
 - **Providers:** Gmail, Outlook.com and Microsoft 365 deliver plus addresses by default. Some providers and some sites don't; check before relying on one.
 - **Trade-off:** the same pattern lets one person create unlimited accounts. That's acceptable for a test app; a real deployment would rely on verification and the sign-up rate limit, and would ignore the `+` part when checking for a taken email (listed under "Given more time" in the README).
 
-**Smoke test:** by default it signs up `smoke+<run id>@example.test`, which needs no real mailbox. Set `SMOKE_EMAIL=you@gmail.com` and it signs up `you+smoke-<run id>@gmail.com` instead, ready for when codes are sent.
+**Smoke test:** by default it signs up `user+smoke-<run id>@example.test`, which needs no real mailbox. Set `SMOKE_EMAIL=you@gmail.com` and it signs up `you+smoke-<run id>@gmail.com` instead, ready for when codes are sent.
 
 ## Design, by layer
 
@@ -65,5 +65,5 @@ Estimate: about 4 hours.
 
 ## Known trade-offs
 
-- Accounts created by the smoke test (`smoke+…@example.test`, or `you+smoke-…@…`) build up in a local database, because there is no delete-account endpoint; `docker compose down -v` clears them.
+- Accounts created by the smoke test (`user+smoke-…@example.test`, or `you+smoke-…@…`) build up in a local database, because there is no delete-account endpoint; `docker compose down -v` clears them.
 - Without verification, someone can register an address that isn't theirs. Verification is the first item under "Given more time".

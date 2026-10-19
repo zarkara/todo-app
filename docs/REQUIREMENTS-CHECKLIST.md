@@ -14,7 +14,7 @@ Each requirement stated in the challenge brief, checked against the code on `waf
 ## Frontend
 
 - [x] **Web client connected to the custom backend:** React in `apps/web`, calling `/api` through nginx (and through the Vite proxy in development).
-- [x] **Log in, then operate only on your own tasks:** every task query is scoped by `user_id` in SQL. Covered by ownership tests in the services, HTTP and repository contract suites, and by the live checks in `validate-security`.
+- [x] **Create an account or log in, then operate only on your own tasks:** sign-up at `/signup` (`POST /auth/register`) signs a new account straight in; every task query is scoped by `user_id` in SQL. Covered by ownership tests in the services, HTTP and repository contract suites, and by the live checks in `validate-security`.
 - [x] **Responsive UI:** viewport meta, mobile-first CSS with breakpoints, 44px touch targets.
 
 ## UX hints
@@ -34,7 +34,7 @@ Each requirement stated in the challenge brief, checked against the code on `waf
 - [~] **A summary of the assignment:** the "Assignment summary" heading had no summary. Added one paragraph.
 - [x] **Overall approach:** five numbered points.
 - [x] **Features completed:** checklist.
-- [~] **Facts in the README are current:** the test count (now 249: 221 unit and component, 28 against Postgres; 98.7% line coverage), the CI scope (every push, plus the live validation scripts) and `/ready` in the API table were out of date. Fixed.
+- [~] **Facts in the README are current:** the test count (now 279: 247 unit and component, 32 against Postgres; 98.7% line coverage), the CI scope (every push, plus the live validation scripts) and `/ready` in the API table were out of date. Fixed.
 - [~] **Given more time, with estimates:** removed versioned migrations and the readiness probe, both already done.
 - [x] **Making it more robust:** six items with estimates.
 
@@ -45,7 +45,7 @@ Each requirement stated in the challenge brief, checked against the code on `waf
 - [x] **We should be able to run the code:** `docker compose up --build`; CI starts the full stack from scratch on every push.
 - [x] **Community-standard syntax and style:** ESLint and Prettier, `tsc --strict`, enforced in CI.
 - [x] **No debug logging, TODOs or FIXMEs:** none in tracked files. ESLint bans `console` and TODO/FIXME comments; the server writes only operational lines (start-up, migrations, errors).
-- [x] **Test coverage:** 249 tests, 98.7% lines, 80% thresholds enforced. Vitest is used (Jest-compatible API), with Testing Library, Supertest and MSW.
+- [x] **Test coverage:** 279 tests plus a browser smoke test, 98.7% lines, 80% thresholds enforced. Vitest is used (Jest-compatible API), with Testing Library, Supertest and MSW.
 - [ ] **Production-ready defaults:** the compose stack runs in development mode, with the published JWT secret and `password123` demo users, on port 8080 open to the whole network (AUTH-13, HOST-1 and HOST-3 in `WAF-FINDINGS.md`). Recommended: bind the default stack to `127.0.0.1`, and add an opt-in production mode.
 
 ## Bonus criteria

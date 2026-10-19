@@ -33,6 +33,12 @@ const login = async (email, password = PASSWORD) => {
   return { status: response.status, body: await response.json() };
 };
 
+const register = async (email, password) => {
+  const response = await call('/auth/register', { method: 'POST', body: { email, password } });
+  return { status: response.status, body: await response.json() };
+};
+const freshEmail = (label) => `security+${label}-${Date.now().toString(36)}@example.test`;
+
 const base64url = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
 const forgedToken = (header, payload, secret) => {
   const unsigned = `${base64url(header)}.${base64url(payload)}`;
@@ -253,14 +259,68 @@ const rateLimitLayer = async () => {
   );
 };
 
+const signUpLayer = async () => {
+  const email = freshEmail('signup');
+  const created = await register(email, 'a-new-pass');
+  const tasks = await call('/tasks', { token: created.body.token });
+  check(
+    'sign-up',
+    'a new account is created (201) and its token works',
+    created.status === 201 && tasks.status === 200,
+    `status ${created.status}, then ${tasks.status}`,
+  );
+  const duplicate = await register(email.toUpperCase(), 'another-pass');
+  check(
+    'sign-up',
+    'an email that already has an account is refused in any letter case (409)',
+    duplicate.status === 409 && duplicate.body.error?.code === 'EMAIL_TAKEN',
+    `status ${duplicate.status}`,
+  );
+  const [tooShort, tooLong] = await Promise.all([
+    register(freshEmail('short'), 'x'.repeat(7)),
+    register(freshEmail('long'), 'x'.repeat(17)),
+  ]);
+  check(
+    'sign-up',
+    'passwords outside 8 to 16 characters are refused (400)',
+    tooShort.status === 400 && tooLong.status === 400,
+    `statuses ${tooShort.status} and ${tooLong.status}`,
+  );
+  check(
+    'sign-up',
+    'the response never contains the password hash',
+    !JSON.stringify(created.body).toLowerCase().includes('hash'),
+  );
+};
+
+const signUpRateLimitLayer = async () => {
+  let firstBlocked = 0;
+  for (let attempt = 1; attempt <= 7 && !firstBlocked; attempt += 1) {
+    const response = await call('/auth/register', {
+      method: 'POST',
+      body: { email: freshEmail(`flood-${attempt}`), password: 'a-new-pass' },
+      headers: { 'x-forwarded-for': `198.51.100.${attempt}` },
+    });
+    if (response.status === 429) firstBlocked = attempt;
+  }
+  check(
+    'rate-limit',
+    'repeated sign-ups are limited even with forged X-Forwarded-For',
+    firstBlocked > 0 && firstBlocked <= 6,
+    `first 429 at attempt ${firstBlocked || 'never'}`,
+  );
+};
+
 const run = async () => {
   if (process.argv.includes('--rate-limit')) {
     await rateLimitLayer();
+    await signUpRateLimitLayer();
   } else {
     await edgeLayer();
     await networkLayer();
     await authorizationLayer(await authenticationLayer());
     await errorHygieneLayer();
+    await signUpLayer();
   }
   const failed = results.filter(({ passed }) => !passed).length;
   process.stdout.write(`\n${results.length - failed}/${results.length} checks passed\n`);

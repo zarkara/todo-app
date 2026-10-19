@@ -14,7 +14,7 @@ cd todo-app
 docker compose up --build
 ```
 
-Open **http://localhost:8080** and sign in with one of the demo accounts:
+Open **http://localhost:8080** and choose **Create an account** (any email address, a password of 8 to 16 characters), or sign in with one of the demo accounts:
 
 | Email               | Password      |
 | ------------------- | ------------- |
@@ -23,19 +23,15 @@ Open **http://localhost:8080** and sign in with one of the demo accounts:
 
 Signing in as both, in two browsers, shows that each user sees only their own tasks.
 
-**Using it:** the app opens on the sign-in page. After signing in you land on "Your tasks", which starts empty. Add tasks in the box at the top; tick one to mark it done; search from the search box (the search is kept in the URL); reorder by dragging the handle or with the ▲/▼ buttons; and click a task to open its detail screen, where you can edit the title, description and done state, or delete it. Your session lasts for the browser tab (eight hours at most); **Sign out** ends it.
+**Using it:** the app opens on the sign-in page. After signing up or signing in you land on "Your tasks", which starts empty. Add tasks in the box at the top; tick one to mark it done; search from the search box (the search is kept in the URL); reorder by dragging the handle or with the ▲/▼ buttons; and click a task to open its detail screen, where you can edit the title, description and done state, or delete it. Your session lasts for the browser tab (eight hours at most); **Sign out** ends it.
 
-**Accounts:** there is no sign-up screen. The API creates the accounts listed in `DEMO_USERS` (comma-separated `email:password` pairs) every time it starts, keeping existing accounts and their tasks. To add your own:
+**Accounts:** anyone can create an account from the sign-in page. Email addresses aren't verified (this is a test app; verification is under "Given more time"), so any address works, and plus addressing (`you+1@gmail.com`, `you+2@gmail.com`) gives you as many test accounts as you like from one inbox. A new account is signed straight in. Passwords are 8 to 16 characters; an email that already has an account is refused, in any letter case; and one address can create 5 accounts an hour.
 
-```sh
-DEMO_USERS='me@example.com:a-long-password,demo@example.com:password123' docker compose up --build
-```
-
-Demo accounts are refused in production mode (`NODE_ENV=production`), so a production deployment has no way to create accounts yet; sign-up is listed under "Given more time".
+The demo accounts come from `DEMO_USERS` (comma-separated `email:password` pairs), which the API creates on every start, keeping existing accounts and their tasks. Production mode (`NODE_ENV=production`) refuses demo accounts, so there users sign up instead.
 
 ### Smoke test: check the first-time user experience
 
-With the stack running, this drives a real browser through what a new user does, and cleans up after itself:
+With the stack running, this drives a real browser through what a new user does, from creating an account onwards, and deletes the tasks it creates:
 
 ```sh
 npm ci
@@ -43,17 +39,17 @@ npx playwright install chromium   # once: the browser it drives
 npm run smoke
 ```
 
-Expect 18 passing steps, ending in `First-time user journey works`:
+Expect 19 passing steps, ending in `First-time user journey works`:
 
 1. Opening the app shows the sign-in page; an empty form explains what's missing; a wrong password is refused with "Invalid email or password".
-2. Signing in as `demo@example.com` opens "Your tasks", with the account in the header and, for a new account, an empty list with a hint.
+2. "Create an account" states the password rule, refuses a short password before sending anything, then creates `user+smoke-<run>@example.test`, signs it straight in, and shows an empty list with a hint.
 3. Adding three tasks lists them in order; a blank title is refused; ticking a task keeps it done after a reload.
 4. Search narrows the list, is kept in the URL and survives a reload; moving a task up saves the new order.
-5. A task's detail screen saves edits; deleting asks for confirmation; signing out locks the list again.
-6. On a phone-sized screen, `grace@example.com` follows a link to one of demo's tasks, signs in, lands on that link, and gets "Task not found"; her list shows none of demo's tasks, and the page fits the screen.
+5. A task's detail screen saves edits; deleting asks for confirmation; signing out locks the list; a link to one of the new account's tasks opens after signing back in with the new password.
+6. On a phone-sized screen, `grace@example.com` can't open that task ("Task not found"), her list shows none of the new account's tasks, and the page fits the screen.
 7. The browser console shows no unexpected errors.
 
-A failure names the step and what it saw. If the app isn't running, it says how to start it. Set `SMOKE_URL` to test another address.
+A failure names the step and what it saw. If the app isn't running, it says how to start it. Set `SMOKE_URL` to test another address, and `SMOKE_EMAIL=you@gmail.com` to sign up `you+smoke-<run>@gmail.com` instead. Each run creates one account, so more than 5 runs an hour hit the sign-up limit; `docker compose restart api` resets it. The accounts stay until `docker compose down -v`.
 
 Compose starts three containers: `db` (PostgreSQL 17, not published, so a Postgres already running on your Mac doesn't conflict), `api` (reachable only through nginx) and `web` (unprivileged nginx on port 8080, which serves the app and proxies `/api` to the API). Data persists in the `db-data` volume; `docker compose down -v` resets it. If a port is taken, override it, for example `WEB_PORT=8081 docker compose up --build`.
 
@@ -70,17 +66,17 @@ npm run dev            # API on :4000 with reload, web on http://localhost:5173
 
 Vite proxies `/api` to the API, so the browser always talks to one origin in development and in production, and no CORS setup is needed.
 
-| Command                          | What it does                                                                                                                                                                                 |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test`                       | Unit and component tests (needs nothing running)                                                                                                                                             |
-| `npm run test:integration`       | Postgres integration tests in their own `todo_test` database, created automatically (`npm run db:up` first)                                                                                  |
-| `npm run test:coverage`          | Everything, with a coverage report and 80% thresholds                                                                                                                                        |
-| `npm run lint`                   | ESLint (bans `console` and TODO/FIXME comments) and Prettier                                                                                                                                 |
-| `npm run typecheck`              | `tsc` in strict mode for every workspace                                                                                                                                                     |
-| `npm run check`                  | lint, typecheck and unit tests: the gate used before each commit                                                                                                                             |
-| `npm run smoke`                  | Against a running stack: the first-time user journey in a real browser (see Smoke test above)                                                                                                |
-| `./scripts/validate-deploy.sh`   | Against a running stack: proves re-deploying is idempotent (no recreation, migrations and seeding no-ops, data kept)                                                                         |
-| `./scripts/validate-security.sh` | Against a running stack: validates every security layer (edge headers, network exposure, non-root containers, production guard, authentication, authorization, error hygiene, rate limiting) |
+| Command                          | What it does                                                                                                                                                                                          |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`                       | Unit and component tests (needs nothing running)                                                                                                                                                      |
+| `npm run test:integration`       | Postgres integration tests in their own `todo_test` database, created automatically (`npm run db:up` first)                                                                                           |
+| `npm run test:coverage`          | Everything, with a coverage report and 80% thresholds                                                                                                                                                 |
+| `npm run lint`                   | ESLint (bans `console` and TODO/FIXME comments) and Prettier                                                                                                                                          |
+| `npm run typecheck`              | `tsc` in strict mode for every workspace                                                                                                                                                              |
+| `npm run check`                  | lint, typecheck and unit tests: the gate used before each commit                                                                                                                                      |
+| `npm run smoke`                  | Against a running stack: the first-time user journey in a real browser (see Smoke test above)                                                                                                         |
+| `./scripts/validate-deploy.sh`   | Against a running stack: proves re-deploying is idempotent (no recreation, migrations and seeding no-ops, data kept)                                                                                  |
+| `./scripts/validate-security.sh` | Against a running stack: validates every security layer (edge headers, network exposure, non-root containers, production guard, authentication, sign-up, authorization, error hygiene, rate limiting) |
 
 CI (GitHub Actions) runs lint, typecheck and the full suite against a Postgres service container, then builds and starts the whole stack and runs both validation scripts against it, on every branch.
 
@@ -98,7 +94,7 @@ The challenge: build a full-stack to-do list with a minimal REST backend and a r
 
 ### Features completed
 
-- [x] Sign-in page as the landing page. After signing in, users return to the page they originally requested.
+- [x] Sign-in page as the landing page, with **Create an account** (signed straight in; passwords of 8 to 16 characters). After signing in, users return to the page they originally requested.
 - [x] Per-user data: another user's task looks exactly like a missing one (404).
 - [x] Task list with search (debounced, kept in the URL so it survives reloads and can be shared).
 - [x] Create, toggle done, edit on a detail screen, and delete (with confirmation).
@@ -108,7 +104,7 @@ The challenge: build a full-stack to-do list with a minimal REST backend and a r
 - [x] PostgreSQL storage with transactional reorder.
 - [x] Docker images for the API and web, and Compose for the whole stack.
 - [x] Hardening: bcrypt, HS256 JWT with the algorithm pinned, login rate limiting, helmet, a strict CSP from nginx, no internal details in 500 responses.
-- [x] 249 automated tests (221 unit and component, 28 against real Postgres), about 98.7% line coverage. CI runs them on every push and pull request, then starts the whole stack and runs the deploy and security validation scripts against it.
+- [x] 279 automated tests (247 unit and component, 32 against real Postgres), about 98.7% line coverage, plus a browser smoke test of the first-time user journey. CI runs them on every push and pull request, then starts the whole stack and runs the deploy and security validation scripts against it.
 
 ### Architecture
 
@@ -136,17 +132,18 @@ apps/web          React client: api client, query hooks, auth, components, pages
 
 All `/tasks` routes require `Authorization: Bearer <token>`. Errors always have the shape `{ "error": { "code", "message", "details?" } }`.
 
-| Method   | Path           | Body                                   | Success                        | Errors        |
-| -------- | -------------- | -------------------------------------- | ------------------------------ | ------------- |
-| `POST`   | `/auth/login`  | `{ email, password }`                  | 200 `{ token, user }`          | 400, 401, 429 |
-| `GET`    | `/tasks?q=`    | —                                      | 200 `Task[]` in position order | 401           |
-| `POST`   | `/tasks`       | `{ title, description? }`              | 201 `Task`, appended last      | 400, 401      |
-| `GET`    | `/tasks/:id`   | —                                      | 200 `Task`                     | 401, 404      |
-| `PATCH`  | `/tasks/:id`   | `{ title?, description?, completed? }` | 200 `Task`                     | 400, 401, 404 |
-| `DELETE` | `/tasks/:id`   | —                                      | 204                            | 401, 404      |
-| `PUT`    | `/tasks/order` | `{ ids: string[] }` (every task, once) | 200 `Task[]`                   | 400, 401      |
-| `GET`    | `/health`      | —                                      | 200                            | —             |
-| `GET`    | `/ready`       | —                                      | 200 when the database answers  | 503           |
+| Method   | Path             | Body                                    | Success                        | Errors        |
+| -------- | ---------------- | --------------------------------------- | ------------------------------ | ------------- |
+| `POST`   | `/auth/register` | `{ email, password }` (8–16 characters) | 201 `{ token, user }`          | 400, 409, 429 |
+| `POST`   | `/auth/login`    | `{ email, password }`                   | 200 `{ token, user }`          | 400, 401, 429 |
+| `GET`    | `/tasks?q=`      | —                                       | 200 `Task[]` in position order | 401           |
+| `POST`   | `/tasks`         | `{ title, description? }`               | 201 `Task`, appended last      | 400, 401      |
+| `GET`    | `/tasks/:id`     | —                                       | 200 `Task`                     | 401, 404      |
+| `PATCH`  | `/tasks/:id`     | `{ title?, description?, completed? }`  | 200 `Task`                     | 400, 401, 404 |
+| `DELETE` | `/tasks/:id`     | —                                       | 204                            | 401, 404      |
+| `PUT`    | `/tasks/order`   | `{ ids: string[] }` (every task, once)  | 200 `Task[]`                   | 400, 401      |
+| `GET`    | `/health`        | —                                       | 200                            | —             |
+| `GET`    | `/ready`         | —                                       | 200 when the database answers  | 503           |
 
 ```sh
 TOKEN=$(curl -s localhost:8080/api/auth/login -H 'content-type: application/json' \

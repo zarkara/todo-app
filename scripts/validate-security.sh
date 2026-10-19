@@ -38,7 +38,7 @@ production_refuses_dev_defaults() {
 }
 expect_status() { [ "$(status_of "${@:2}")" = "$1" ]; }
 
-echo "== Edge, network, authentication, authorization, error hygiene"
+echo "== Edge, network, authentication, authorization, error hygiene, sign-up"
 node scripts/validate-security.mjs || failures=$((failures + 1))
 
 echo
@@ -59,7 +59,7 @@ check authentication "a deleted user's token cannot write (401, not 500)" \
 docker compose restart api >/dev/null 2>&1 && docker compose up -d --no-build --wait api >/dev/null 2>&1
 
 echo
-echo "== Rate limiting (last: it uses up this client's login allowance)"
+echo "== Rate limiting (last: it uses up this client's sign-in and sign-up allowance)"
 node scripts/validate-security.mjs --rate-limit || failures=$((failures + 1))
 
 echo
