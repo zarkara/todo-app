@@ -66,6 +66,16 @@ const signIn = async (page, email, password) => {
   await page.getByRole('button', { name: 'Sign in' }).click();
 };
 
+// The list updates optimistically, before the server has saved the change; wait for the save itself
+// before reloading, or the reload cancels the request in flight.
+const savedBy = (page, method, path) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === method &&
+      new URL(response.url()).pathname.startsWith(`/api${path}`) &&
+      response.ok(),
+  );
+
 const addTask = async (page, title) => {
   await page.getByLabel('New task title').fill(title);
   await page.getByRole('button', { name: 'Add' }).click();
@@ -196,9 +206,10 @@ const newUserJourney = (page, state) => [
   [
     'Ticking a task marks it done, and it stays done after a reload',
     async () => {
-      // Controlled by the task data, so it flips once the toggle updates the list (immediately, optimistically).
+      const saved = savedBy(page, 'PATCH', '/tasks/');
       await page.getByLabel(`Mark “${MILK}” as done`).click();
       await page.getByLabel(`Mark “${MILK}” as not done`).waitFor();
+      await saved;
       await page.reload();
       await page.getByLabel(`Mark “${MILK}” as not done`).waitFor();
     },
@@ -222,8 +233,10 @@ const newUserJourney = (page, state) => [
   [
     'Moving a task up reorders the list, and the order is saved',
     async () => {
+      const saved = savedBy(page, 'PUT', '/tasks/order');
       await page.getByRole('button', { name: `Move “${PLUMBER}” up` }).click();
       await waitForTitles(page, [MILK, PLUMBER, REPORT]);
+      await saved;
       await page.reload();
       await waitForTitles(page, [MILK, PLUMBER, REPORT]);
     },
