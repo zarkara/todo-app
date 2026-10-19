@@ -24,10 +24,12 @@ export interface AppDependencies {
 }
 
 // Slows password guessing; errors flow through the shared handler so the body shape is uniform.
+// Only failed attempts count, so signing in from another tab or device is never blocked.
 const loginLimiter = ({ limit, windowMs }: { limit: number; windowMs: number }) =>
   rateLimit({
     limit,
     windowMs,
+    skipSuccessfulRequests: true,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     handler: (_req, _res, next) => next(new TooManyRequestsError()),

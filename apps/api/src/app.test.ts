@@ -338,6 +338,21 @@ describe('hardening', () => {
     expect(blocked.body.error.code).toBe('RATE_LIMITED');
   });
 
+  it('counts only failed logins, so signing in again (a new tab, a second device) is never blocked', async () => {
+    const app = buildTestApp({ loginRateLimit: { limit: 2, windowMs: 60_000 } });
+    const signIn = (password: string) =>
+      request(app).post('/auth/login').send({ email: 'ada@example.com', password });
+
+    // One after another: a success is uncounted once it completes.
+    const successes = [await signIn(PASSWORD), await signIn(PASSWORD), await signIn(PASSWORD)];
+    await signIn('guess');
+    await signIn('guess');
+    const blocked = await signIn('guess');
+
+    expect(successes.map(({ status }) => status)).toEqual([200, 200, 200]);
+    expect(blocked.status).toBe(429);
+  });
+
   it('does not rate limit the rest of the API', async () => {
     const app = buildTestApp({ loginRateLimit: { limit: 1, windowMs: 60_000 } });
 
